@@ -8,7 +8,7 @@
 
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDocFromServer, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAdminRole } from '@/hooks/useAdminRole';
@@ -19,6 +19,23 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useToast } from '@/hooks/use-toast';
 import { Shield, Lock, Eye, EyeOff, AlertTriangle, Loader2 } from 'lucide-react';
 import SEO from '@/components/SEO';
+
+// Helper function to fetch with retry
+const fetchWithRetry = async <T,>(
+  fetchFn: () => Promise<T>,
+  maxRetries: number = 3,
+  delayMs: number = 500
+): Promise<T> => {
+  for (let i = 0; i <= maxRetries; i++) {
+    try {
+      return await fetchFn();
+    } catch (err) {
+      if (i === maxRetries) throw err;
+      await new Promise(resolve => setTimeout(resolve, delayMs * (i + 1)));
+    }
+  }
+  throw new Error('Max retries exceeded');
+};
 
 const Admin = () => {
   const navigate = useNavigate();
@@ -41,7 +58,7 @@ const Admin = () => {
 
       try {
         const settingsRef = doc(db, 'admin_settings', 'console');
-        const settingsSnap = await getDoc(settingsRef);
+        const settingsSnap = await fetchWithRetry(() => getDocFromServer(settingsRef));
 
         if (settingsSnap.exists()) {
           const data = settingsSnap.data();
@@ -141,7 +158,7 @@ const Admin = () => {
 
     try {
       const settingsRef = doc(db, 'admin_settings', 'console');
-      const settingsSnap = await getDoc(settingsRef);
+      const settingsSnap = await fetchWithRetry(() => getDocFromServer(settingsRef));
 
       if (!settingsSnap.exists()) {
         toast({
