@@ -6,7 +6,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, enableNetwork } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -40,6 +40,8 @@ export function useAdminRole(): UseAdminRoleResult {
       // Auth complete, user exists - check Firestore
       try {
         setLoading(true);
+        // Ensure Firestore is online before querying
+        await enableNetwork(db);
         const roleRef = doc(db, 'user_roles', user.uid);
         const roleSnap = await getDoc(roleRef);
         
