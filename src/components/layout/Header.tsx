@@ -1,3 +1,11 @@
+/**
+ * MOBILE RESPONSIVENESS GUIDELINES:
+ * - Mobile menu via Sheet component
+ * - Touch targets minimum 44x44px
+ * - Logo and nav icons properly sized for mobile
+ * - Maintain responsive design in all future edits
+ */
+
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Menu, ShoppingBag, Search, User } from "lucide-react";
@@ -20,8 +28,8 @@ const Header = () => {
   return (
     <header className="sticky top-0 z-50 w-full">
       {/* Announcement Bar */}
-      <div className="bg-primary text-primary-foreground py-2.5 text-center text-sm">
-        <p className="font-sans tracking-wide">
+      <div className="bg-primary text-primary-foreground py-2 md:py-2.5 text-center text-xs md:text-sm">
+        <p className="font-sans tracking-wide px-4">
           Free Shipping on Orders Above ₹999 • COD Available
         </p>
       </div>
@@ -29,17 +37,17 @@ const Header = () => {
       {/* Main Header */}
       <nav className="bg-background/95 backdrop-blur-md border-b border-border/50">
         <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between h-18 md:h-20">
+          <div className="flex items-center justify-between h-14 md:h-18 lg:h-20">
             {/* Left: Mobile Menu + Logo */}
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 md:gap-4">
               {/* Mobile Menu */}
               <Sheet open={isOpen} onOpenChange={setIsOpen}>
                 <SheetTrigger asChild className="md:hidden">
-                  <Button variant="ghost" size="icon" className="shrink-0">
+                  <Button variant="ghost" size="icon" className="shrink-0 h-10 w-10" aria-label="Open menu">
                     <Menu className="h-5 w-5" />
                   </Button>
                 </SheetTrigger>
-                <SheetContent side="left" className="w-80">
+                <SheetContent side="left" className="w-[280px] sm:w-80">
                   <div className="flex flex-col gap-6 mt-8">
                     <Logo className="mb-4" />
                     {navigation.map((item) => (
@@ -48,7 +56,7 @@ const Header = () => {
                         to={item.href}
                         onClick={() => setIsOpen(false)}
                         className={cn(
-                          "text-lg font-serif transition-colors hover:text-gold",
+                          "text-lg font-serif transition-colors hover:text-gold min-h-[44px] flex items-center",
                           location.pathname === item.href
                             ? "text-gold"
                             : "text-foreground"
@@ -68,13 +76,13 @@ const Header = () => {
             </div>
 
             {/* Center: Desktop Navigation */}
-            <div className="hidden md:flex items-center gap-8">
+            <div className="hidden md:flex items-center gap-6 lg:gap-8">
               {navigation.map((item) => (
                 <Link
                   key={item.name}
                   to={item.href}
                   className={cn(
-                    "text-sm font-medium transition-colors hover:text-gold relative group",
+                    "text-sm font-medium transition-colors hover:text-gold relative group min-h-[44px] flex items-center",
                     location.pathname === item.href
                       ? "text-gold"
                       : "text-foreground"
@@ -90,15 +98,15 @@ const Header = () => {
             </div>
 
             {/* Right: Action Icons */}
-            <div className="flex items-center gap-1 md:gap-2">
-              <Button variant="ghost" size="icon" className="hidden md:flex h-9 w-9">
+            <div className="flex items-center gap-0.5 md:gap-1 lg:gap-2">
+              <Button variant="ghost" size="icon" className="hidden md:flex h-10 w-10" aria-label="Search">
                 <Search className="h-4 w-4" />
               </Button>
-              <Button variant="ghost" size="icon" className="hidden md:flex h-9 w-9">
+              <Button variant="ghost" size="icon" className="hidden md:flex h-10 w-10" aria-label="Account">
                 <User className="h-4 w-4" />
               </Button>
               <Link to="/cart">
-                <Button variant="ghost" size="icon" className="relative h-9 w-9">
+                <Button variant="ghost" size="icon" className="relative h-10 w-10" aria-label="Shopping cart">
                   <ShoppingBag className="h-4 w-4" />
                   <span className="absolute -top-0.5 -right-0.5 bg-gold text-gold-foreground text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-medium">
                     0
