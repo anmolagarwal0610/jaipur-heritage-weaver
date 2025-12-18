@@ -1,6 +1,5 @@
 import Layout from "@/components/layout/Layout";
 import HeroSection from "@/components/home/HeroSection";
-import MarqueeBanner from "@/components/home/MarqueeBanner";
 import CategorySection from "@/components/home/CategorySection";
 import TrustBadges from "@/components/home/TrustBadges";
 import FeaturedProducts from "@/components/home/FeaturedProducts";
@@ -12,9 +11,8 @@ const Index = () => {
   return (
     <Layout>
       <HeroSection />
-      <MarqueeBanner />
-      <CategorySection />
       <TrustBadges />
+      <CategorySection />
       <FeaturedProducts />
       <AboutPreview />
       <TestimonialsSection />

@@ -2,73 +2,113 @@ import { Link } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
+import artisanImage from "@/assets/artisan.jpg";
 
 const OurStory = () => {
   return (
     <Layout>
       {/* Hero Section */}
-      <section className="relative py-24 md:py-32 bg-primary text-primary-foreground overflow-hidden">
-        <div className="absolute inset-0 opacity-10">
-          <img
-            src="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?auto=format&fit=crop&w=1920&q=80"
-            alt="Heritage background"
-            className="w-full h-full object-cover"
-          />
-        </div>
-        <div className="container mx-auto px-4 relative z-10">
+      <section className="relative py-24 md:py-32 bg-primary text-primary-foreground">
+        <div className="container mx-auto px-4">
           <div className="max-w-3xl mx-auto text-center">
-            <span className="text-gold font-medium tracking-widest text-sm uppercase">
+            <span className="text-gold font-medium tracking-[0.25em] text-xs uppercase">
               Our Heritage
             </span>
-            <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl font-semibold mt-4 mb-6">
+            <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl font-medium mt-6 mb-8 leading-tight">
               Weaving Stories Through Generations
             </h1>
-            <p className="text-primary-foreground/80 text-lg md:text-xl">
-              From the narrow lanes of Sanganer to homes across India, discover the journey of Jaipur Touch.
+            <p className="text-primary-foreground/80 text-lg leading-relaxed max-w-2xl mx-auto">
+              From the narrow lanes of Sanganer to homes across India and beyond — 
+              discover the journey of Jaipur Touch and our commitment to preserving 
+              Rajasthan's textile heritage.
             </p>
           </div>
         </div>
       </section>
 
-      {/* Origin Story */}
-      <section className="py-16 md:py-24">
+      {/* Founder Story */}
+      <section className="py-24 md:py-32">
         <div className="container mx-auto px-4">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
+          <div className="grid lg:grid-cols-2 gap-16 items-center">
             <div>
-              <span className="text-gold font-medium tracking-widest text-sm uppercase">
-                Where It All Began
+              <span className="text-gold/80 font-medium tracking-[0.2em] text-xs uppercase">
+                The Beginning
               </span>
-              <h2 className="font-serif text-3xl md:text-4xl font-semibold text-foreground mt-2 mb-6">
-                The Roots of Tradition
+              <h2 className="font-serif text-3xl md:text-4xl font-medium text-foreground mt-4 mb-8 leading-tight">
+                Where It All Started
               </h2>
-              <div className="space-y-4 text-muted-foreground">
+              <div className="space-y-5 text-muted-foreground leading-relaxed">
                 <p>
-                  Our story begins in the vibrant city of Jaipur, where the art of block printing has flourished 
-                  for over 500 years. In the town of Sanganer, just south of the Pink City, generations of artisan 
-                  families have dedicated their lives to this ancient craft.
+                  Seven years ago, <strong className="text-foreground">Suhani Agarwal</strong> founded 
+                  Snare Decor with a dream that felt both ambitious and deeply personal — to share 
+                  the breathtaking artistry of Jaipur's textile craftsmen with the world.
                 </p>
                 <p>
-                  Jaipur Touch was founded in 2008 by Ramesh Sharma, whose family has been practicing block printing 
-                  for four generations. What started as a small workshop with five artisans has grown into a 
-                  community of over 500 craftspeople, all united by their passion for preserving this precious heritage.
+                  Growing up surrounded by the vibrant colors and intricate patterns of Rajasthani 
+                  textiles, Suhani witnessed firsthand how skilled artisans poured their hearts into 
+                  every piece they created. Yet, she also saw how these master craftspeople struggled 
+                  to find markets that valued their work fairly.
                 </p>
                 <p>
-                  Today, every piece that carries the Jaipur Touch name is a testament to centuries of accumulated 
-                  knowledge, skill, and artistic expression.
+                  <strong className="text-foreground">Jaipur Touch</strong> was born as a bridge — 
+                  connecting the talented hands of Sanganer's artisan families to homes that would 
+                  cherish their creations. What started as a small collection has grown into a 
+                  movement, empowering over 500 artisan families while preserving techniques 
+                  passed down through generations.
+                </p>
+                <p>
+                  Today, every Jaipur Touch piece carries not just beautiful patterns, but the 
+                  warmth of hands that crafted it and the legacy of a craft that has flourished 
+                  for over five centuries.
                 </p>
               </div>
             </div>
             <div className="relative">
-              <div className="aspect-[4/5] rounded-2xl overflow-hidden">
+              <div className="aspect-[4/5] rounded-sm overflow-hidden">
                 <img
-                  src="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?auto=format&fit=crop&w=800&q=80"
-                  alt="Artisan at work"
+                  src={artisanImage}
+                  alt="Jaipuri artisan practicing traditional block printing"
                   className="w-full h-full object-cover"
                 />
               </div>
-              <div className="absolute -bottom-6 -left-6 bg-gold text-gold-foreground p-6 rounded-xl">
-                <p className="text-4xl font-serif font-bold">500+</p>
-                <p className="text-sm">Years of Heritage</p>
+              <div className="absolute -bottom-6 -left-6 bg-gold text-gold-foreground p-6 shadow-lg">
+                <p className="text-4xl font-serif font-medium">7</p>
+                <p className="text-sm mt-1">Years of Snare Decor</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Mission */}
+      <section className="py-24 md:py-32 bg-secondary/30">
+        <div className="container mx-auto px-4">
+          <div className="max-w-3xl mx-auto text-center">
+            <span className="text-gold/80 font-medium tracking-[0.2em] text-xs uppercase">
+              Our Mission
+            </span>
+            <h2 className="font-serif text-3xl md:text-4xl font-medium text-foreground mt-4 mb-8">
+              Taking Jaipuri Culture Global
+            </h2>
+            <p className="text-muted-foreground text-lg leading-relaxed mb-8">
+              Our goal is simple yet profound — to promote local artisans and take Jaipuri 
+              culture and designs to every corner of the globe. We believe that when you 
+              choose authentic handcrafted textiles, you're not just decorating your home; 
+              you're supporting families, preserving traditions, and owning a piece of 
+              living history.
+            </p>
+            <div className="grid md:grid-cols-3 gap-8 mt-12">
+              <div className="text-center">
+                <p className="text-4xl font-serif font-medium text-primary">500+</p>
+                <p className="text-sm text-muted-foreground mt-2">Artisan Families Supported</p>
+              </div>
+              <div className="text-center">
+                <p className="text-4xl font-serif font-medium text-primary">50,000+</p>
+                <p className="text-sm text-muted-foreground mt-2">Happy Customers</p>
+              </div>
+              <div className="text-center">
+                <p className="text-4xl font-serif font-medium text-primary">100%</p>
+                <p className="text-sm text-muted-foreground mt-2">Handcrafted Products</p>
               </div>
             </div>
           </div>
@@ -76,51 +116,41 @@ const OurStory = () => {
       </section>
 
       {/* The Craft */}
-      <section className="py-16 md:py-24 bg-secondary/30">
+      <section className="py-24 md:py-32">
         <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <span className="text-gold font-medium tracking-widest text-sm uppercase">
+          <div className="text-center mb-16">
+            <span className="text-gold/80 font-medium tracking-[0.2em] text-xs uppercase">
               The Art
             </span>
-            <h2 className="font-serif text-3xl md:text-4xl font-semibold text-foreground mt-2">
+            <h2 className="font-serif text-3xl md:text-4xl font-medium text-foreground mt-4">
               The Block Printing Process
             </h2>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid md:grid-cols-3 gap-12">
             {[
               {
                 step: "01",
                 title: "Design & Carving",
-                description: "Master craftsmen hand-carve intricate designs into wooden blocks made from teak. Each block can take up to a week to complete.",
-                image: "https://images.unsplash.com/photo-1604719312566-8912e9227c6a?auto=format&fit=crop&w=600&q=80",
+                description: "Master craftsmen hand-carve intricate designs into wooden blocks made from teak. Each block can take up to a week to complete, with patterns passed down through generations.",
               },
               {
                 step: "02",
                 title: "Natural Dyes",
-                description: "We use vegetable and mineral dyes sourced from indigo, pomegranate, and other natural sources — gentle on skin and the environment.",
-                image: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?auto=format&fit=crop&w=600&q=80",
+                description: "We use vegetable and mineral dyes sourced from indigo, pomegranate, turmeric, and other natural sources — gentle on skin and kind to the environment.",
               },
               {
                 step: "03",
                 title: "Hand Printing",
-                description: "Each fabric is printed by hand, one block impression at a time. A single bedsheet can require over 1,000 individual impressions.",
-                image: "https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?auto=format&fit=crop&w=600&q=80",
+                description: "Each fabric is printed by hand, one block impression at a time. A single bedsheet can require over 1,000 individual impressions, each placed with practiced precision.",
               },
             ].map((item, index) => (
               <div key={index} className="text-center">
-                <div className="aspect-square rounded-2xl overflow-hidden mb-6">
-                  <img
-                    src={item.image}
-                    alt={item.title}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                <span className="text-gold font-serif text-4xl font-bold">{item.step}</span>
-                <h3 className="font-serif text-xl font-semibold text-foreground mt-2 mb-3">
+                <span className="text-gold font-serif text-5xl font-medium">{item.step}</span>
+                <h3 className="font-serif text-xl font-medium text-foreground mt-4 mb-4">
                   {item.title}
                 </h3>
-                <p className="text-muted-foreground">{item.description}</p>
+                <p className="text-muted-foreground leading-relaxed">{item.description}</p>
               </div>
             ))}
           </div>
@@ -128,35 +158,17 @@ const OurStory = () => {
       </section>
 
       {/* Values */}
-      <section className="py-16 md:py-24">
+      <section className="py-24 md:py-32 bg-secondary/30">
         <div className="container mx-auto px-4">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <div className="order-2 lg:order-1">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="aspect-[3/4] rounded-xl overflow-hidden">
-                  <img
-                    src="https://images.unsplash.com/photo-1620626011761-996317b8d101?auto=format&fit=crop&w=400&q=80"
-                    alt="Artisan community"
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                <div className="aspect-[3/4] rounded-xl overflow-hidden mt-8">
-                  <img
-                    src="https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?auto=format&fit=crop&w=400&q=80"
-                    alt="Quality products"
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-              </div>
-            </div>
-            <div className="order-1 lg:order-2">
-              <span className="text-gold font-medium tracking-widest text-sm uppercase">
+          <div className="grid lg:grid-cols-2 gap-16 items-center">
+            <div>
+              <span className="text-gold/80 font-medium tracking-[0.2em] text-xs uppercase">
                 Our Values
               </span>
-              <h2 className="font-serif text-3xl md:text-4xl font-semibold text-foreground mt-2 mb-6">
+              <h2 className="font-serif text-3xl md:text-4xl font-medium text-foreground mt-4 mb-10">
                 What We Stand For
               </h2>
-              <div className="space-y-6">
+              <div className="space-y-8">
                 {[
                   {
                     title: "Artisan Empowerment",
@@ -172,17 +184,26 @@ const OurStory = () => {
                   },
                   {
                     title: "Quality Excellence",
-                    description: "Every piece undergoes rigorous quality checks. We stand behind our products with a satisfaction guarantee.",
+                    description: "Every piece undergoes rigorous quality checks. We stand behind our products with complete satisfaction guarantee.",
                   },
                 ].map((value, index) => (
-                  <div key={index} className="flex gap-4">
-                    <div className="w-2 h-2 rounded-full bg-gold mt-2 shrink-0" />
+                  <div key={index} className="flex gap-5">
+                    <div className="w-1.5 h-1.5 rounded-full bg-gold mt-2.5 shrink-0" />
                     <div>
-                      <h3 className="font-serif font-semibold text-foreground">{value.title}</h3>
-                      <p className="text-muted-foreground text-sm mt-1">{value.description}</p>
+                      <h3 className="font-serif font-medium text-foreground text-lg">{value.title}</h3>
+                      <p className="text-muted-foreground mt-2 leading-relaxed">{value.description}</p>
                     </div>
                   </div>
                 ))}
+              </div>
+            </div>
+            <div className="relative">
+              <div className="aspect-square rounded-sm overflow-hidden">
+                <img
+                  src={artisanImage}
+                  alt="Traditional block printing craftsmanship"
+                  className="w-full h-full object-cover"
+                />
               </div>
             </div>
           </div>
@@ -190,18 +211,19 @@ const OurStory = () => {
       </section>
 
       {/* CTA */}
-      <section className="py-16 md:py-24 bg-primary text-primary-foreground">
+      <section className="py-24 md:py-32 bg-primary text-primary-foreground">
         <div className="container mx-auto px-4 text-center">
-          <h2 className="font-serif text-3xl md:text-4xl font-semibold mb-4">
+          <h2 className="font-serif text-3xl md:text-4xl font-medium mb-6">
             Experience the Jaipur Touch
           </h2>
-          <p className="text-primary-foreground/80 max-w-2xl mx-auto mb-8">
-            Each purchase supports traditional artisan families and helps preserve India's textile heritage.
+          <p className="text-primary-foreground/80 max-w-2xl mx-auto mb-10 leading-relaxed">
+            Each purchase supports traditional artisan families and helps preserve 
+            India's textile heritage for generations to come.
           </p>
           <Link to="/shop">
-            <Button size="lg" className="bg-gold text-gold-foreground hover:bg-gold/90">
+            <Button size="lg" className="bg-gold text-gold-foreground hover:bg-gold/90 px-10 h-12 text-sm tracking-wide">
               Shop Our Collection
-              <ArrowRight className="ml-2 h-5 w-5" />
+              <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </Link>
         </div>

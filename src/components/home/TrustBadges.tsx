@@ -25,22 +25,19 @@ const features = [
 
 const TrustBadges = () => {
   return (
-    <section className="py-12 bg-secondary/50">
+    <section className="py-8 border-y border-border/50">
       <div className="container mx-auto px-4">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
-          {features.map((feature, index) => (
+          {features.map((feature) => (
             <div
               key={feature.title}
-              className="flex flex-col items-center text-center animate-fade-in"
-              style={{ animationDelay: `${index * 0.1}s` }}
+              className="flex flex-col items-center text-center"
             >
-              <div className="w-14 h-14 rounded-full bg-gold/20 flex items-center justify-center mb-3">
-                <feature.icon className="w-6 h-6 text-gold" />
-              </div>
-              <h3 className="font-serif font-semibold text-foreground">
+              <feature.icon className="w-5 h-5 text-gold mb-2" strokeWidth={1.5} />
+              <h3 className="font-medium text-sm text-foreground">
                 {feature.title}
               </h3>
-              <p className="text-muted-foreground text-sm mt-1">
+              <p className="text-muted-foreground text-xs mt-0.5">
                 {feature.description}
               </p>
             </div>
