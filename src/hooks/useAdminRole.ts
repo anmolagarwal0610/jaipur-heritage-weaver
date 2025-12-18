@@ -6,7 +6,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { doc, getDoc, enableNetwork } from 'firebase/firestore';
+import { doc, getDocFromServer } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -15,6 +15,23 @@ interface UseAdminRoleResult {
   loading: boolean;
   error: Error | null;
 }
+
+// Helper function to fetch with retry
+const fetchWithRetry = async <T>(
+  fetchFn: () => Promise<T>,
+  maxRetries: number = 3,
+  delayMs: number = 500
+): Promise<T> => {
+  for (let i = 0; i <= maxRetries; i++) {
+    try {
+      return await fetchFn();
+    } catch (err) {
+      if (i === maxRetries) throw err;
+      await new Promise(resolve => setTimeout(resolve, delayMs * (i + 1)));
+    }
+  }
+  throw new Error('Max retries exceeded');
+};
 
 export function useAdminRole(): UseAdminRoleResult {
   const { user, loading: authLoading } = useAuth();
@@ -37,13 +54,11 @@ export function useAdminRole(): UseAdminRoleResult {
         return;
       }
 
-      // Auth complete, user exists - check Firestore
+      // Auth complete, user exists - check Firestore with retry
       try {
         setLoading(true);
-        // Ensure Firestore is online before querying
-        await enableNetwork(db);
         const roleRef = doc(db, 'user_roles', user.uid);
-        const roleSnap = await getDoc(roleRef);
+        const roleSnap = await fetchWithRetry(() => getDocFromServer(roleRef));
         
         if (roleSnap.exists()) {
           const data = roleSnap.data();
