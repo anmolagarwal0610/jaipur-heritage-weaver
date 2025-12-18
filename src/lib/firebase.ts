@@ -19,6 +19,8 @@ import { getAuth, GoogleAuthProvider } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 
+import { initializeFirestore } from "firebase/firestore";
+
 // Your web app's Firebase configuration
 const firebaseConfig = {
   apiKey: "AIzaSyAbl7QL5oNJK1PVzwIu1QbKBxTjzwKoP3E",
@@ -30,6 +32,10 @@ const firebaseConfig = {
 };
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
+
+export const db = initializeFirestore(app, {
+  experimentalForceLongPolling: true,
+});
 
 // Initialize services
 export const auth = getAuth(app);
