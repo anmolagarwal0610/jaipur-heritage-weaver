@@ -1,71 +1,62 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
+import artisanImage from "@/assets/artisan.jpg";
 
 const AboutPreview = () => {
   return (
-    <section className="py-16 md:py-24 bg-secondary/30">
+    <section className="py-24 md:py-32 bg-background">
       <div className="container mx-auto px-4">
-        <div className="grid lg:grid-cols-2 gap-12 items-center">
-          {/* Image Grid */}
+        <div className="grid lg:grid-cols-2 gap-16 items-center">
+          {/* Image */}
           <div className="relative">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="aspect-[4/5] rounded-xl overflow-hidden">
-                <img
-                  src="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?auto=format&fit=crop&w=600&q=80"
-                  alt="Artisan at work"
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <div className="aspect-[4/5] rounded-xl overflow-hidden mt-8">
-                <img
-                  src="https://images.unsplash.com/photo-1604719312566-8912e9227c6a?auto=format&fit=crop&w=600&q=80"
-                  alt="Block printing process"
-                  className="w-full h-full object-cover"
-                />
-              </div>
+            <div className="aspect-[4/5] rounded-sm overflow-hidden">
+              <img
+                src={artisanImage}
+                alt="Jaipuri artisan hand block printing"
+                className="w-full h-full object-cover"
+              />
             </div>
             
             {/* Floating Stats */}
-            <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground px-8 py-4 rounded-xl shadow-xl flex gap-8">
-              <div className="text-center">
-                <p className="text-2xl font-serif font-bold text-gold">500+</p>
-                <p className="text-xs text-primary-foreground/70">Artisans</p>
-              </div>
-              <div className="w-px bg-primary-foreground/20" />
-              <div className="text-center">
-                <p className="text-2xl font-serif font-bold text-gold">50K+</p>
-                <p className="text-xs text-primary-foreground/70">Happy Customers</p>
+            <div className="absolute -bottom-6 -right-6 bg-primary text-primary-foreground px-8 py-6 shadow-lg">
+              <div className="flex gap-8">
+                <div className="text-center">
+                  <p className="text-2xl font-serif font-medium text-gold">500+</p>
+                  <p className="text-xs text-primary-foreground/70 mt-1">Artisans</p>
+                </div>
+                <div className="w-px bg-primary-foreground/20" />
+                <div className="text-center">
+                  <p className="text-2xl font-serif font-medium text-gold">50K+</p>
+                  <p className="text-xs text-primary-foreground/70 mt-1">Happy Customers</p>
+                </div>
               </div>
             </div>
           </div>
 
           {/* Content */}
           <div className="lg:pl-8">
-            <span className="text-gold font-medium tracking-widest text-sm uppercase">
+            <span className="text-gold/80 font-medium tracking-[0.2em] text-xs uppercase">
               Our Heritage
             </span>
-            <h2 className="font-serif text-3xl md:text-4xl font-semibold text-foreground mt-2 mb-6">
-              A Legacy of Craftsmanship
+            <h2 className="font-serif text-3xl md:text-4xl font-medium text-foreground mt-4 mb-8 leading-tight">
+              A Legacy of<br />Craftsmanship
             </h2>
-            <div className="space-y-4 text-muted-foreground">
+            <div className="space-y-5 text-muted-foreground leading-relaxed">
               <p>
-                Jaipur Touch was born from a deep reverence for Rajasthan's centuries-old textile traditions. 
-                Our journey began in the narrow lanes of Sanganer, where master artisans have been practicing 
-                the art of hand block printing for generations.
+                Jaipur Touch was born from a deep reverence for Rajasthan's centuries-old 
+                textile traditions. Founded by Suhani Agarwal under Snare Decor, our journey 
+                began with a simple vision — to bring the magic of Jaipuri craftsmanship 
+                to homes across the world.
               </p>
               <p>
-                Each piece in our collection tells a story — carved wooden blocks dipped in natural dyes, 
-                pressed onto fine cotton with practiced precision. It's a dance of patience and passion 
-                that transforms fabric into art.
-              </p>
-              <p>
-                Today, we work directly with over 500 artisan families, ensuring fair wages and preserving 
-                these ancient techniques for future generations.
+                Each piece in our collection tells a story — carved wooden blocks dipped 
+                in natural dyes, pressed onto fine cotton with practiced precision. It's 
+                a dance of patience and passion that transforms fabric into art.
               </p>
             </div>
-            <Link to="/our-story" className="inline-block mt-8">
-              <Button className="bg-gold text-gold-foreground hover:bg-gold/90">
+            <Link to="/our-story" className="inline-block mt-10">
+              <Button variant="outline" className="border-border text-foreground hover:bg-secondary/50 px-8 h-11 text-sm tracking-wide">
                 Read Our Story
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
