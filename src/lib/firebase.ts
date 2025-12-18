@@ -16,7 +16,7 @@
 
 import { initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
-// import { getFirestore } from "firebase/firestore";
+import { initializeFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 
 // Your web app's Firebase configuration
@@ -28,12 +28,17 @@ const firebaseConfig = {
   messagingSenderId: "1009352915866",
   appId: "1:1009352915866:web:36e737e66f64a9bc281823",
 };
+
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
-// Initialize services
+// Initialize Firestore with long-polling to avoid WebChannel issues
+export const db = initializeFirestore(app, {
+  experimentalForceLongPolling: true,
+});
+
+// Initialize other services
 export const auth = getAuth(app);
-// export const db = getFirestore(app);
 export const storage = getStorage(app);
 
 // Auth providers
