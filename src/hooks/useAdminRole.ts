@@ -32,8 +32,8 @@ export function useAdminRole(): UseAdminRoleResult {
 
       try {
         setLoading(true);
-        // Check for admin role document: {userId}_admin
-        const roleRef = doc(db, 'user_roles', `${user.uid}_admin`);
+        // Check for admin role document using UID directly
+        const roleRef = doc(db, 'user_roles', user.uid);
         const roleSnap = await getDoc(roleRef);
         
         if (roleSnap.exists()) {
