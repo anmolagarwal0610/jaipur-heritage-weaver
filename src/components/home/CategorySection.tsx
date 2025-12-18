@@ -1,34 +1,40 @@
 import { Link } from "react-router-dom";
+import bedsheetsImg from "@/assets/bedsheets.jpg";
+import quiltImg from "@/assets/quilt.jpg";
+import curtainsImg from "@/assets/curtains.jpg";
+import cushionImg from "@/assets/cushion_throws.jpg";
+import tableLinenImg from "@/assets/table_linen.jpg";
+import bathrobeImg from "@/assets/bathrobe_towels.jpg";
 
 const categories = [
   {
     name: "Bedsheets",
-    image: "https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?auto=format&fit=crop&w=600&q=80",
+    image: bedsheetsImg,
     href: "/shop?category=bedsheets",
   },
   {
     name: "Quilts & Dohars",
-    image: "https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?auto=format&fit=crop&w=600&q=80",
+    image: quiltImg,
     href: "/shop?category=quilts",
   },
   {
     name: "Curtains",
-    image: "https://images.unsplash.com/photo-1507089947368-19c1da9775ae?auto=format&fit=crop&w=600&q=80",
+    image: curtainsImg,
     href: "/shop?category=curtains",
   },
   {
     name: "Cushions & Throws",
-    image: "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?auto=format&fit=crop&w=600&q=80",
+    image: cushionImg,
     href: "/shop?category=cushions",
   },
   {
     name: "Table Linen",
-    image: "https://images.unsplash.com/photo-1449247709967-d4461a6a6103?auto=format&fit=crop&w=600&q=80",
+    image: tableLinenImg,
     href: "/shop?category=table-linen",
   },
   {
     name: "Bathrobes & Towels",
-    image: "https://images.unsplash.com/photo-1620626011761-996317b8d101?auto=format&fit=crop&w=600&q=80",
+    image: bathrobeImg,
     href: "/shop?category=bath",
   },
 ];

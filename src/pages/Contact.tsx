@@ -47,8 +47,8 @@ const Contact = () => {
                   </div>
                   <div>
                     <h3 className="font-semibold text-foreground">Phone</h3>
-                    <a href="tel:+919876543210" className="text-muted-foreground hover:text-gold transition-colors">
-                      +91 98765 43210
+                    <a href="tel:+919887238849" className="text-muted-foreground hover:text-gold transition-colors">
+                      +91 98872 38849
                     </a>
                   </div>
                 </div>
@@ -60,12 +60,12 @@ const Contact = () => {
                   <div>
                     <h3 className="font-semibold text-foreground">WhatsApp</h3>
                     <a 
-                      href="https://wa.me/919876543210" 
+                      href="https://wa.me/919887238849" 
                       target="_blank" 
                       rel="noopener noreferrer"
                       className="text-muted-foreground hover:text-gold transition-colors"
                     >
-                      +91 98765 43210
+                      +91 98872 38849
                     </a>
                   </div>
                 </div>
@@ -76,8 +76,8 @@ const Contact = () => {
                   </div>
                   <div>
                     <h3 className="font-semibold text-foreground">Email</h3>
-                    <a href="mailto:hello@jaipurtouch.com" className="text-muted-foreground hover:text-gold transition-colors">
-                      hello@jaipurtouch.com
+                    <a href="mailto:hello@jaipurtouch.in" className="text-muted-foreground hover:text-gold transition-colors">
+                      hello@jaipurtouch.in
                     </a>
                   </div>
                 </div>
@@ -89,8 +89,8 @@ const Contact = () => {
                   <div>
                     <h3 className="font-semibold text-foreground">Address</h3>
                     <p className="text-muted-foreground">
-                      123 Heritage Lane, Johari Bazaar,<br />
-                      Jaipur, Rajasthan 302003
+                      A-91 Singh Bhoomi, Khatipura,<br />
+                      Jaipur, Rajasthan 302012
                     </p>
                   </div>
                 </div>

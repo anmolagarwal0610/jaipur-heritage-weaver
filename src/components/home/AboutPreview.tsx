@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
-import artisanImage from "@/assets/artisan.jpg";
+import displayImage from "@/assets/display_variety.jpg";
 
 const AboutPreview = () => {
   return (
@@ -12,8 +12,8 @@ const AboutPreview = () => {
           <div className="relative">
             <div className="aspect-[4/5] rounded-sm overflow-hidden">
               <img
-                src={artisanImage}
-                alt="Jaipuri artisan hand block printing"
+                src={displayImage}
+                alt="Display of Jaipuri textile collection"
                 className="w-full h-full object-cover"
               />
             </div>

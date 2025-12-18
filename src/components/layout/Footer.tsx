@@ -17,7 +17,6 @@ const Footer = () => {
   const quickLinks = [
     { name: "Shop All", href: "/shop" },
     { name: "Our Story", href: "/our-story" },
-    { name: "About Us", href: "/about" },
     { name: "Contact", href: "/contact" },
     { name: "Track Order", href: "/track-order" },
   ];
@@ -135,20 +134,20 @@ const Footer = () => {
               <li className="flex items-start gap-3">
                 <MapPin className="h-5 w-5 text-gold shrink-0 mt-0.5" />
                 <span className="text-primary-foreground/70 text-sm">
-                  123 Heritage Lane, Johari Bazaar,<br />
-                  Jaipur, Rajasthan 302003
+                  A-91 Singh Bhoomi, Khatipura,<br />
+                  Jaipur, Rajasthan 302012
                 </span>
               </li>
               <li className="flex items-center gap-3">
                 <Phone className="h-5 w-5 text-gold shrink-0" />
-                <a href="tel:+919876543210" className="text-primary-foreground/70 hover:text-gold text-sm transition-colors">
-                  +91 98765 43210
+                <a href="tel:+919887238849" className="text-primary-foreground/70 hover:text-gold text-sm transition-colors">
+                  +91 98872 38849
                 </a>
               </li>
               <li className="flex items-center gap-3">
                 <Mail className="h-5 w-5 text-gold shrink-0" />
-                <a href="mailto:hello@jaipurtouch.com" className="text-primary-foreground/70 hover:text-gold text-sm transition-colors">
-                  hello@jaipurtouch.com
+                <a href="mailto:hello@jaipurtouch.in" className="text-primary-foreground/70 hover:text-gold text-sm transition-colors">
+                  hello@jaipurtouch.in
                 </a>
               </li>
             </ul>
