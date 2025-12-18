@@ -2,7 +2,8 @@ import { Link } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
-import artisanImage from "@/assets/artisan.jpg";
+import artisanAnimated from "@/assets/artisan_animated.png";
+import artisan2 from "@/assets/artisan_2.jpg";
 
 const OurStory = () => {
   return (
@@ -66,7 +67,7 @@ const OurStory = () => {
             <div className="relative">
               <div className="aspect-[4/5] rounded-sm overflow-hidden">
                 <img
-                  src={artisanImage}
+                  src={artisanAnimated}
                   alt="Jaipuri artisan practicing traditional block printing"
                   className="w-full h-full object-cover"
                 />
@@ -200,7 +201,7 @@ const OurStory = () => {
             <div className="relative">
               <div className="aspect-square rounded-sm overflow-hidden">
                 <img
-                  src={artisanImage}
+                  src={artisan2}
                   alt="Traditional block printing craftsmanship"
                   className="w-full h-full object-cover"
                 />
