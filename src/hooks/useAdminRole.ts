@@ -17,22 +17,29 @@ interface UseAdminRoleResult {
 }
 
 export function useAdminRole(): UseAdminRoleResult {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
     const checkAdminRole = async () => {
+      // Wait for auth to complete first
+      if (authLoading) {
+        setLoading(true);
+        return;
+      }
+
+      // Auth complete, but no user
       if (!user) {
         setIsAdmin(false);
         setLoading(false);
         return;
       }
 
+      // Auth complete, user exists - check Firestore
       try {
         setLoading(true);
-        // Check for admin role document using UID directly
         const roleRef = doc(db, 'user_roles', user.uid);
         const roleSnap = await getDoc(roleRef);
         
@@ -52,7 +59,7 @@ export function useAdminRole(): UseAdminRoleResult {
     };
 
     checkAdminRole();
-  }, [user]);
+  }, [user, authLoading]);
 
   return { isAdmin, loading, error };
 }
