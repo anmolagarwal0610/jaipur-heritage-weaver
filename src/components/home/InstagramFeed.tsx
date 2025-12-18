@@ -1,3 +1,11 @@
+/**
+ * MOBILE RESPONSIVENESS GUIDELINES:
+ * - Grid is 3 columns on mobile, 6 on desktop
+ * - Images use lazy loading for performance
+ * - Touch targets minimum 44x44px
+ * - Maintain responsive design in all future edits
+ */
+
 import { Instagram } from "lucide-react";
 
 const instagramPosts = [
@@ -35,50 +43,53 @@ const instagramPosts = [
 
 const InstagramFeed = () => {
   return (
-    <section className="py-16 md:py-24 bg-secondary/30">
+    <section className="py-12 md:py-16 lg:py-24 bg-secondary/30">
       <div className="container mx-auto px-4">
-        <div className="text-center mb-12">
-          <span className="text-gold font-medium tracking-widest text-sm uppercase">
+        <div className="text-center mb-8 md:mb-12">
+          <span className="text-gold font-medium tracking-widest text-xs sm:text-sm uppercase">
             @jaipurtouch
           </span>
-          <h2 className="font-serif text-3xl md:text-4xl font-semibold text-foreground mt-2">
+          <h2 className="font-serif text-2xl sm:text-3xl md:text-4xl font-semibold text-foreground mt-2">
             Follow Us on Instagram
           </h2>
-          <p className="text-muted-foreground mt-3">
+          <p className="text-muted-foreground mt-2 md:mt-3 text-sm md:text-base">
             Get inspired by our latest collections and customer styles
           </p>
         </div>
 
-        <div className="grid grid-cols-3 md:grid-cols-6 gap-2 md:gap-4">
+        <div className="grid grid-cols-3 md:grid-cols-6 gap-1.5 sm:gap-2 md:gap-4">
           {instagramPosts.map((post, index) => (
             <a
               key={post.id}
               href="https://instagram.com/jaipurtouch"
               target="_blank"
               rel="noopener noreferrer"
-              className="group relative aspect-square overflow-hidden rounded-lg animate-fade-in"
+              className="group relative aspect-square overflow-hidden rounded-md md:rounded-lg animate-fade-in"
               style={{ animationDelay: `${index * 0.05}s` }}
+              aria-label={`View Instagram post ${post.id}`}
             >
               <img
                 src={post.image}
-                alt={`Instagram post ${post.id}`}
+                alt={`Jaipur Touch Instagram post ${post.id} - Handcrafted textiles`}
                 className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                loading="lazy"
+                decoding="async"
               />
               <div className="absolute inset-0 bg-primary/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                <Instagram className="w-8 h-8 text-primary-foreground" />
+                <Instagram className="w-6 h-6 md:w-8 md:h-8 text-primary-foreground" />
               </div>
             </a>
           ))}
         </div>
 
-        <div className="text-center mt-8">
+        <div className="text-center mt-6 md:mt-8">
           <a
             href="https://instagram.com/jaipurtouch"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 text-primary hover:text-gold transition-colors font-medium"
+            className="inline-flex items-center gap-2 text-primary hover:text-gold transition-colors font-medium text-sm md:text-base min-h-[44px]"
           >
-            <Instagram className="w-5 h-5" />
+            <Instagram className="w-4 h-4 md:w-5 md:h-5" />
             Follow @jaipurtouch
           </a>
         </div>

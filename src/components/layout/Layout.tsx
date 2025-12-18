@@ -1,3 +1,11 @@
+/**
+ * MOBILE RESPONSIVENESS GUIDELINES:
+ * - Layout is flex column with min-h-screen
+ * - Main content flexes to fill available space
+ * - Header and Footer are responsive components
+ * - Maintain responsive design in all future edits
+ */
+
 import { ReactNode } from "react";
 import Header from "./Header";
 import Footer from "./Footer";
