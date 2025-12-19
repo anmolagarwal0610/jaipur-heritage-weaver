@@ -1,6 +1,7 @@
 /**
  * Product Detail Page - Etsy-inspired clean design
  * Features: Image gallery, product info, collapsible sections, related products
+ * @module ProductDetail
  */
 
 import { useState, useEffect } from "react";
