@@ -16,7 +16,7 @@ import {
   sendPasswordResetEmail,
   updateProfile
 } from 'firebase/auth';
-import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, getDocFromServer, serverTimestamp } from 'firebase/firestore';
 import { auth, db, googleProvider } from '@/lib/firebase';
 import type { UserProfile } from '@/lib/firebase-types';
 
@@ -50,10 +50,27 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Helper function to fetch with retry
+  const fetchWithRetry = async <T,>(
+    fetchFn: () => Promise<T>,
+    maxRetries: number = 3,
+    delayMs: number = 500
+  ): Promise<T> => {
+    for (let i = 0; i <= maxRetries; i++) {
+      try {
+        return await fetchFn();
+      } catch (err) {
+        if (i === maxRetries) throw err;
+        await new Promise(resolve => setTimeout(resolve, delayMs * (i + 1)));
+      }
+    }
+    throw new Error('Max retries exceeded');
+  };
+
   // Create or update user profile in Firestore
   const createUserProfile = async (firebaseUser: User) => {
     const userRef = doc(db, 'users', firebaseUser.uid);
-    const userSnap = await getDoc(userRef);
+    const userSnap = await fetchWithRetry(() => getDocFromServer(userRef));
     
     if (!userSnap.exists()) {
       const newProfile: Omit<UserProfile, 'createdAt' | 'updatedAt'> & { createdAt: ReturnType<typeof serverTimestamp>; updatedAt: ReturnType<typeof serverTimestamp> } = {
@@ -75,10 +92,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   // Fetch user profile
   const fetchUserProfile = async (uid: string) => {
-    const userRef = doc(db, 'users', uid);
-    const userSnap = await getDoc(userRef);
-    if (userSnap.exists()) {
-      setUserProfile(userSnap.data() as UserProfile);
+    try {
+      const userRef = doc(db, 'users', uid);
+      const userSnap = await fetchWithRetry(() => getDocFromServer(userRef));
+      if (userSnap.exists()) {
+        setUserProfile(userSnap.data() as UserProfile);
+      }
+    } catch (err) {
+      console.error('Error fetching user profile:', err);
     }
   };
 
