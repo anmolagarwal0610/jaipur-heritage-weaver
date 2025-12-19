@@ -33,9 +33,13 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 
 // Initialize Firestore with long-polling to avoid WebChannel issues
-export const db = initializeFirestore(app, {
-  experimentalForceLongPolling: true,
-});
+export const db = initializeFirestore(
+  app,
+  {
+    experimentalForceLongPolling: true,
+  },
+  "jaipur",
+);
 
 // Initialize other services
 export const auth = getAuth(app);
