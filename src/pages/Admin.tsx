@@ -1,44 +1,64 @@
 /**
  * Admin Console Page
- * 
+ *
  * TEMPORARY: Admin role check disabled - any logged-in user can access.
  * TODO: Re-enable useAdminRole hook after fixing Firestore issues.
  */
 
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { doc, getDocFromServer, setDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { useAuth } from '@/contexts/AuthContext';
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { doc, getDocFromServer, setDoc, serverTimestamp } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { useAuth } from "@/contexts/AuthContext";
 // TEMPORARY: Admin role check disabled
 // import { useAdminRole } from '@/hooks/useAdminRole';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useToast } from '@/hooks/use-toast';
-import { Shield, Lock, Eye, EyeOff, AlertTriangle, Loader2 } from 'lucide-react';
-import SEO from '@/components/SEO';
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useToast } from "@/hooks/use-toast";
+import { Shield, Lock, Eye, EyeOff, AlertTriangle, Loader2 } from "lucide-react";
+import SEO from "@/components/SEO";
 
 // TEMP BUILD MODE: allow any logged-in user into admin without password/role checks.
 // Set to false once Firestore rules + roles are fixed.
 const TEMP_OPEN_ADMIN_CONSOLE = true;
 
+//TEST
+
+import { addDoc, collection } from "firebase/firestore";
+useEffect(() => {
+  const testFirestore = async () => {
+    try {
+      await addDoc(collection(db, "categories"), {
+        name: "firestore-test",
+        createdAt: serverTimestamp(),
+      });
+      console.log("Firestore write OK");
+    } catch (e) {
+      console.error("Firestore write FAILED", e);
+    }
+  };
+
+  testFirestore();
+}, []);
+////TEST
+
 // Helper function to fetch with retry
 const fetchWithRetry = async <T,>(
   fetchFn: () => Promise<T>,
   maxRetries: number = 3,
-  delayMs: number = 500
+  delayMs: number = 500,
 ): Promise<T> => {
   for (let i = 0; i <= maxRetries; i++) {
     try {
       return await fetchFn();
     } catch (err) {
       if (i === maxRetries) throw err;
-      await new Promise(resolve => setTimeout(resolve, delayMs * (i + 1)));
+      await new Promise((resolve) => setTimeout(resolve, delayMs * (i + 1)));
     }
   }
-  throw new Error('Max retries exceeded');
+  throw new Error("Max retries exceeded");
 };
 
 const Admin = () => {
@@ -49,8 +69,8 @@ const Admin = () => {
   const adminLoading = false;
   const { toast } = useToast();
 
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isVerified, setIsVerified] = useState(TEMP_OPEN_ADMIN_CONSOLE);
@@ -71,7 +91,7 @@ const Admin = () => {
       if (!user || !isAdmin) return;
 
       try {
-        const settingsRef = doc(db, 'admin_settings', 'console');
+        const settingsRef = doc(db, "admin_settings", "console");
         const settingsSnap = await fetchWithRetry(() => getDocFromServer(settingsRef));
 
         if (settingsSnap.exists()) {
@@ -82,13 +102,13 @@ const Admin = () => {
           setSetupRequired(true);
         }
       } catch (err) {
-        console.error('Error checking admin setup:', err);
+        console.error("Error checking admin setup:", err);
         // If we can't read admin_settings, default to requiring setup (safer than assuming password exists).
         setSetupRequired(true);
         toast({
-          title: 'Error',
-          description: 'Failed to check admin settings',
-          variant: 'destructive'
+          title: "Error",
+          description: "Failed to check admin settings",
+          variant: "destructive",
         });
       } finally {
         setCheckingSetup(false);
@@ -103,7 +123,7 @@ const Admin = () => {
   // Redirect if not authenticated
   useEffect(() => {
     if (!authLoading && !user) {
-      navigate('/auth', { state: { from: '/admin' } });
+      navigate("/auth", { state: { from: "/admin" } });
     }
   }, [user, authLoading, navigate]);
 
@@ -111,9 +131,9 @@ const Admin = () => {
   const hashPassword = async (pwd: string): Promise<string> => {
     const encoder = new TextEncoder();
     const data = encoder.encode(pwd);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashBuffer = await crypto.subtle.digest("SHA-256", data);
     const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
   };
 
   // Handle password setup
@@ -122,18 +142,18 @@ const Admin = () => {
 
     if (password.length < 6) {
       toast({
-        title: 'Password too short',
-        description: 'Password must be at least 6 characters',
-        variant: 'destructive'
+        title: "Password too short",
+        description: "Password must be at least 6 characters",
+        variant: "destructive",
       });
       return;
     }
 
     if (password !== confirmPassword) {
       toast({
-        title: 'Passwords do not match',
-        description: 'Please make sure both passwords are the same',
-        variant: 'destructive'
+        title: "Passwords do not match",
+        description: "Please make sure both passwords are the same",
+        variant: "destructive",
       });
       return;
     }
@@ -142,25 +162,25 @@ const Admin = () => {
 
     try {
       const passwordHash = await hashPassword(password);
-      const settingsRef = doc(db, 'admin_settings', 'console');
-      
+      const settingsRef = doc(db, "admin_settings", "console");
+
       await setDoc(settingsRef, {
         passwordHash,
         setupComplete: true,
-        updatedAt: serverTimestamp()
+        updatedAt: serverTimestamp(),
       });
 
       setIsVerified(true);
       toast({
-        title: 'Admin console ready',
-        description: 'Password has been set successfully'
+        title: "Admin console ready",
+        description: "Password has been set successfully",
       });
     } catch (err) {
-      console.error('Error setting up admin password:', err);
+      console.error("Error setting up admin password:", err);
       toast({
-        title: 'Setup failed',
-        description: 'Could not save admin password. Check Firestore permissions.',
-        variant: 'destructive'
+        title: "Setup failed",
+        description: "Could not save admin password. Check Firestore permissions.",
+        variant: "destructive",
       });
     } finally {
       setIsSubmitting(false);
@@ -173,14 +193,14 @@ const Admin = () => {
     setIsSubmitting(true);
 
     try {
-      const settingsRef = doc(db, 'admin_settings', 'console');
+      const settingsRef = doc(db, "admin_settings", "console");
       const settingsSnap = await fetchWithRetry(() => getDocFromServer(settingsRef));
 
       if (!settingsSnap.exists()) {
         toast({
-          title: 'Error',
-          description: 'Admin settings not found',
-          variant: 'destructive'
+          title: "Error",
+          description: "Admin settings not found",
+          variant: "destructive",
         });
         return;
       }
@@ -191,22 +211,22 @@ const Admin = () => {
       if (inputHash === storedHash) {
         setIsVerified(true);
         toast({
-          title: 'Access granted',
-          description: 'Welcome to the admin console'
+          title: "Access granted",
+          description: "Welcome to the admin console",
         });
       } else {
         toast({
-          title: 'Access denied',
-          description: 'Incorrect password',
-          variant: 'destructive'
+          title: "Access denied",
+          description: "Incorrect password",
+          variant: "destructive",
         });
       }
     } catch (err) {
-      console.error('Error verifying password:', err);
+      console.error("Error verifying password:", err);
       toast({
-        title: 'Verification failed',
-        description: 'Could not verify password',
-        variant: 'destructive'
+        title: "Verification failed",
+        description: "Could not verify password",
+        variant: "destructive",
       });
     } finally {
       setIsSubmitting(false);
@@ -237,15 +257,10 @@ const Admin = () => {
                 <AlertTriangle className="w-8 h-8 text-destructive" />
               </div>
               <CardTitle className="text-2xl font-serif">Access Denied</CardTitle>
-              <CardDescription>
-                You don't have permission to access the admin console.
-              </CardDescription>
+              <CardDescription>You don't have permission to access the admin console.</CardDescription>
             </CardHeader>
             <CardContent>
-              <Button 
-                onClick={() => navigate('/')} 
-                className="w-full bg-gold hover:bg-gold/90 text-gold-foreground"
-              >
+              <Button onClick={() => navigate("/")} className="w-full bg-gold hover:bg-gold/90 text-gold-foreground">
                 Go to Homepage
               </Button>
             </CardContent>
@@ -268,11 +283,7 @@ const Admin = () => {
                   <Shield className="w-6 h-6" />
                   <h1 className="text-xl font-serif">Admin Console</h1>
                 </div>
-                <Button 
-                  variant="secondary" 
-                  size="sm"
-                  onClick={() => navigate('/')}
-                >
+                <Button variant="secondary" size="sm" onClick={() => navigate("/")}>
                   Exit to Site
                 </Button>
               </div>
@@ -340,25 +351,22 @@ const Admin = () => {
               <Lock className="w-8 h-8 text-gold" />
             </div>
             <CardTitle className="text-2xl font-serif">
-              {setupRequired ? 'Setup Admin Console' : 'Admin Console'}
+              {setupRequired ? "Setup Admin Console" : "Admin Console"}
             </CardTitle>
             <CardDescription>
-              {setupRequired 
-                ? 'Create a password to secure your admin console' 
-                : 'Enter your admin password to continue'
-              }
+              {setupRequired
+                ? "Create a password to secure your admin console"
+                : "Enter your admin password to continue"}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={setupRequired ? handleSetup : handleVerify} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="password">
-                  {setupRequired ? 'Create Password' : 'Password'}
-                </Label>
+                <Label htmlFor="password">{setupRequired ? "Create Password" : "Password"}</Label>
                 <div className="relative">
                   <Input
                     id="password"
-                    type={showPassword ? 'text' : 'password'}
+                    type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Enter password"
@@ -387,7 +395,7 @@ const Admin = () => {
                   <Label htmlFor="confirmPassword">Confirm Password</Label>
                   <Input
                     id="confirmPassword"
-                    type={showPassword ? 'text' : 'password'}
+                    type={showPassword ? "text" : "password"}
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="Confirm password"
@@ -405,10 +413,12 @@ const Admin = () => {
                 {isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    {setupRequired ? 'Setting up...' : 'Verifying...'}
+                    {setupRequired ? "Setting up..." : "Verifying..."}
                   </>
+                ) : setupRequired ? (
+                  "Setup Console"
                 ) : (
-                  setupRequired ? 'Setup Console' : 'Enter Console'
+                  "Enter Console"
                 )}
               </Button>
             </form>

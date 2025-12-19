@@ -16,20 +16,6 @@ interface UseAdminRoleResult {
   error: Error | null;
 }
 
-///TEST
-import { addDoc, collection, serverTimestamp } from "firebase/firestore";
-
-async function testFirestore() {
-  await addDoc(collection(db, "categories"), {
-    name: "firestore-test",
-    createdAt: serverTimestamp(),
-  });
-
-  console.log("Firestore write OK");
-}
-
-///TEST
-
 // Helper function to fetch with retry
 const fetchWithRetry = async <T,>(
   fetchFn: () => Promise<T>,
