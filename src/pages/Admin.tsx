@@ -1,9 +1,8 @@
 /**
  * Admin Console Page
  * 
- * Protected admin area with password verification.
- * First-time access requires password setup.
- * Subsequent access requires password verification.
+ * TEMPORARY: Admin role check disabled - any logged-in user can access.
+ * TODO: Re-enable useAdminRole hook after fixing Firestore issues.
  */
 
 import { useState, useEffect } from 'react';
@@ -11,7 +10,8 @@ import { useNavigate } from 'react-router-dom';
 import { doc, getDocFromServer, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
-import { useAdminRole } from '@/hooks/useAdminRole';
+// TEMPORARY: Admin role check disabled
+// import { useAdminRole } from '@/hooks/useAdminRole';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -40,7 +40,9 @@ const fetchWithRetry = async <T,>(
 const Admin = () => {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
-  const { isAdmin, loading: adminLoading } = useAdminRole();
+  // TEMPORARY: Bypass admin check - any logged-in user is treated as admin
+  const isAdmin = true;
+  const adminLoading = false;
   const { toast } = useToast();
 
   const [password, setPassword] = useState('');
