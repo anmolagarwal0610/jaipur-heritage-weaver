@@ -250,82 +250,11 @@ const Admin = () => {
     );
   }
 
-  // Admin console (after verification)
+  // Admin console (after verification) - redirect to dashboard
   if (isVerified) {
-    return (
-      <>
-        <SEO title="Admin Console | Jaipur Touch" description="Manage your store" />
-        <div className="min-h-screen bg-background">
-          <div className="bg-primary text-primary-foreground py-4">
-            <div className="container mx-auto px-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Shield className="w-6 h-6" />
-                  <h1 className="text-xl font-serif">Admin Console</h1>
-                </div>
-                <Button variant="secondary" size="sm" onClick={() => navigate("/")}>
-                  Exit to Site
-                </Button>
-              </div>
-            </div>
-          </div>
-
-          <div className="container mx-auto px-4 py-12">
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              <Card 
-                className="hover:shadow-lg transition-shadow cursor-pointer"
-                onClick={() => navigate('/admin/products')}
-              >
-                <CardHeader>
-                  <CardTitle className="font-serif">Products</CardTitle>
-                  <CardDescription>Manage categories and products</CardDescription>
-                </CardHeader>
-              </Card>
-
-              <Card 
-                className="hover:shadow-lg transition-shadow cursor-pointer"
-                onClick={() => navigate('/admin/orders')}
-              >
-                <CardHeader>
-                  <CardTitle className="font-serif">Orders</CardTitle>
-                  <CardDescription>View and manage orders</CardDescription>
-                </CardHeader>
-              </Card>
-
-              <Card 
-                className="hover:shadow-lg transition-shadow cursor-pointer"
-                onClick={() => navigate('/admin/customers')}
-              >
-                <CardHeader>
-                  <CardTitle className="font-serif">Customers</CardTitle>
-                  <CardDescription>View customer information</CardDescription>
-                </CardHeader>
-              </Card>
-
-              <Card 
-                className="hover:shadow-lg transition-shadow cursor-pointer"
-                onClick={() => navigate('/admin/analytics')}
-              >
-                <CardHeader>
-                  <CardTitle className="font-serif">Analytics</CardTitle>
-                  <CardDescription>Store performance metrics</CardDescription>
-                </CardHeader>
-              </Card>
-
-              <Card 
-                className="hover:shadow-lg transition-shadow cursor-pointer"
-                onClick={() => navigate('/admin/settings')}
-              >
-                <CardHeader>
-                  <CardTitle className="font-serif">Settings</CardTitle>
-                  <CardDescription>Store configuration</CardDescription>
-                </CardHeader>
-              </Card>
-            </div>
-          </div>
-        </div>
-      </>
-    );
+    navigate('/admin/dashboard');
+    return null;
+  }
   }
 
   // Password setup or verification form
