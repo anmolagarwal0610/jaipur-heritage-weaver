@@ -255,7 +255,6 @@ const Admin = () => {
     navigate('/admin/dashboard');
     return null;
   }
-  }
 
   // Password setup or verification form
   return (
