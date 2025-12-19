@@ -64,12 +64,12 @@ const App = () => (
               
               {/* Admin Routes */}
               <Route path="/admin" element={<Admin />} />
-              <Route path="/admin" element={<AdminLayout />}>
-                <Route path="products" element={<CategoriesManager />} />
-                <Route path="orders" element={<OrdersList />} />
-                <Route path="customers" element={<CustomersList />} />
-                <Route path="analytics" element={<Analytics />} />
-                <Route path="settings" element={<SettingsPage />} />
+              <Route element={<AdminLayout />}>
+                <Route path="/admin/products" element={<CategoriesManager />} />
+                <Route path="/admin/orders" element={<OrdersList />} />
+                <Route path="/admin/customers" element={<CustomersList />} />
+                <Route path="/admin/analytics" element={<Analytics />} />
+                <Route path="/admin/settings" element={<SettingsPage />} />
               </Route>
               
               <Route path="*" element={<NotFound />} />
