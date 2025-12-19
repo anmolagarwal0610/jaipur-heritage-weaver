@@ -18,7 +18,6 @@ interface UseAdminRoleResult {
 
 ///TEST
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
-import { db } from "@/lib/firebase";
 
 async function testFirestore() {
   await addDoc(collection(db, "categories"), {
