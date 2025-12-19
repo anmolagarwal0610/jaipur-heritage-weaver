@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useCategories } from '@/hooks/useCategories';
 import { Category } from '@/lib/firebase-types';
 import { Button } from '@/components/ui/button';
@@ -43,11 +44,13 @@ import {
   StarOff, 
   Loader2,
   FolderOpen,
-  Image as ImageIcon
+  Image as ImageIcon,
+  ChevronRight
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export default function CategoriesManager() {
+  const navigate = useNavigate();
   const {
     categories,
     rockstarCategories,
@@ -257,7 +260,11 @@ export default function CategoriesManager() {
                 </TableRow>
               ) : (
                 categories.map((category) => (
-                  <TableRow key={category.id}>
+                  <TableRow 
+                    key={category.id} 
+                    className="cursor-pointer hover:bg-muted/50"
+                    onClick={() => navigate(`/admin/products/${category.id}`)}
+                  >
                     <TableCell>
                       <div className="w-12 h-12 rounded-md overflow-hidden bg-muted">
                         {category.imageUrl ? (
@@ -285,7 +292,16 @@ export default function CategoriesManager() {
                       </p>
                     </TableCell>
                     <TableCell className="text-center">
-                      <Badge variant="outline">{category.productCount}</Badge>
+                      <Badge 
+                        variant="outline" 
+                        className="cursor-pointer hover:bg-primary hover:text-primary-foreground"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/admin/products/${category.id}`);
+                        }}
+                      >
+                        {category.productCount} <ChevronRight className="h-3 w-3 ml-1 inline" />
+                      </Badge>
                     </TableCell>
                     <TableCell className="text-center">
                       <Badge variant="secondary">{category.featuredProductLimit}</Badge>
@@ -334,7 +350,10 @@ export default function CategoriesManager() {
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8"
-                          onClick={() => openEditDialog(category)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openEditDialog(category);
+                          }}
                         >
                           <Pencil className="h-4 w-4" />
                         </Button>
@@ -342,7 +361,10 @@ export default function CategoriesManager() {
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8 text-destructive hover:text-destructive"
-                          onClick={() => openDeleteDialog(category)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openDeleteDialog(category);
+                          }}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>

@@ -272,42 +272,50 @@ const Admin = () => {
 
           <div className="container mx-auto px-4 py-12">
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+              <Card 
+                className="hover:shadow-lg transition-shadow cursor-pointer"
+                onClick={() => navigate('/admin/products')}
+              >
                 <CardHeader>
                   <CardTitle className="font-serif">Products</CardTitle>
-                  <CardDescription>Manage your product catalog</CardDescription>
+                  <CardDescription>Manage categories and products</CardDescription>
                 </CardHeader>
               </Card>
 
-              <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+              <Card 
+                className="hover:shadow-lg transition-shadow cursor-pointer"
+                onClick={() => navigate('/admin/orders')}
+              >
                 <CardHeader>
                   <CardTitle className="font-serif">Orders</CardTitle>
                   <CardDescription>View and manage orders</CardDescription>
                 </CardHeader>
               </Card>
 
-              <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-                <CardHeader>
-                  <CardTitle className="font-serif">Categories</CardTitle>
-                  <CardDescription>Organize product categories</CardDescription>
-                </CardHeader>
-              </Card>
-
-              <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+              <Card 
+                className="hover:shadow-lg transition-shadow cursor-pointer"
+                onClick={() => navigate('/admin/customers')}
+              >
                 <CardHeader>
                   <CardTitle className="font-serif">Customers</CardTitle>
                   <CardDescription>View customer information</CardDescription>
                 </CardHeader>
               </Card>
 
-              <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+              <Card 
+                className="hover:shadow-lg transition-shadow cursor-pointer"
+                onClick={() => navigate('/admin/analytics')}
+              >
                 <CardHeader>
                   <CardTitle className="font-serif">Analytics</CardTitle>
                   <CardDescription>Store performance metrics</CardDescription>
                 </CardHeader>
               </Card>
 
-              <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+              <Card 
+                className="hover:shadow-lg transition-shadow cursor-pointer"
+                onClick={() => navigate('/admin/settings')}
+              >
                 <CardHeader>
                   <CardTitle className="font-serif">Settings</CardTitle>
                   <CardDescription>Store configuration</CardDescription>
