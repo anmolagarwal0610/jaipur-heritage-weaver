@@ -7,7 +7,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,14 +28,18 @@ const Auth = () => {
   
   const { user, signIn, signUp, signInWithGoogle, resetPassword } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
+
+  const redirectTo =
+    (location.state as { from?: string } | null)?.from || '/dashboard';
 
   // Redirect if already logged in
   useEffect(() => {
     if (user) {
-      navigate('/dashboard');
+      navigate(redirectTo, { replace: true });
     }
-  }, [user, navigate]);
+  }, [user, navigate, redirectTo]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,7 +52,7 @@ const Auth = () => {
           title: "Welcome back!",
           description: "You have successfully logged in.",
         });
-        navigate('/dashboard');
+        navigate(redirectTo);
       } else if (mode === 'signup') {
         if (!displayName.trim()) {
           throw new Error('Please enter your name');
@@ -58,7 +62,7 @@ const Auth = () => {
           title: "Account created!",
           description: "Welcome to Jaipur Touch.",
         });
-        navigate('/dashboard');
+        navigate(redirectTo);
       } else if (mode === 'reset') {
         await resetPassword(email);
         toast({
@@ -103,7 +107,7 @@ const Auth = () => {
         title: "Welcome!",
         description: "You have successfully signed in with Google.",
       });
-      navigate('/dashboard');
+      navigate(redirectTo);
     } catch (error: any) {
       toast({
         title: "Error",
