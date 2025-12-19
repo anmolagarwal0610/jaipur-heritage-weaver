@@ -24,26 +24,6 @@ import SEO from "@/components/SEO";
 // Set to false once Firestore rules + roles are fixed.
 const TEMP_OPEN_ADMIN_CONSOLE = true;
 
-//TEST
-
-import { addDoc, collection } from "firebase/firestore";
-useEffect(() => {
-  const testFirestore = async () => {
-    try {
-      await addDoc(collection(db, "categories"), {
-        name: "firestore-test",
-        createdAt: serverTimestamp(),
-      });
-      console.log("Firestore write OK");
-    } catch (e) {
-      console.error("Firestore write FAILED", e);
-    }
-  };
-
-  testFirestore();
-}, []);
-////TEST
-
 // Helper function to fetch with retry
 const fetchWithRetry = async <T,>(
   fetchFn: () => Promise<T>,
