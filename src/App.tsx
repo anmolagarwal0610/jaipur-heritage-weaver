@@ -11,7 +11,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 
 // Lazy load pages for better performance
@@ -24,6 +24,14 @@ const Auth = lazy(() => import("./pages/Auth"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Admin = lazy(() => import("./pages/Admin"));
 const NotFound = lazy(() => import("./pages/NotFound"));
+
+// Admin pages
+const AdminLayout = lazy(() => import("./pages/admin/AdminLayout"));
+const CategoriesManager = lazy(() => import("./pages/admin/CategoriesManager"));
+const OrdersList = lazy(() => import("./pages/admin/OrdersList"));
+const CustomersList = lazy(() => import("./pages/admin/CustomersList"));
+const Analytics = lazy(() => import("./pages/admin/Analytics"));
+const SettingsPage = lazy(() => import("./pages/admin/Settings"));
 
 const queryClient = new QueryClient();
 
@@ -53,7 +61,17 @@ const App = () => (
               <Route path="/cart" element={<Cart />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/dashboard" element={<Dashboard />} />
+              
+              {/* Admin Routes */}
               <Route path="/admin" element={<Admin />} />
+              <Route path="/admin" element={<AdminLayout />}>
+                <Route path="products" element={<CategoriesManager />} />
+                <Route path="orders" element={<OrdersList />} />
+                <Route path="customers" element={<CustomersList />} />
+                <Route path="analytics" element={<Analytics />} />
+                <Route path="settings" element={<SettingsPage />} />
+              </Route>
+              
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>

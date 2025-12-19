@@ -6,6 +6,8 @@
  * - orders/{orderId} - Order documents
  * - products/{productId} - Product catalog
  * - categories/{categoryId} - Product categories
+ * - store_settings/{settingId} - Store configuration
+ * - user_roles/{roleId} - User role assignments
  */
 
 import { Timestamp } from 'firebase/firestore';
@@ -36,30 +38,89 @@ export interface UserRoleDocument {
   assignedAt: Timestamp;
 }
 
-// Product category
+// Product category with Rockstar support
 export interface Category {
   id: string;
   name: string;
   slug: string;
-  imageUrl: string;
   description: string;
-  order: number;
+  imageUrl: string; // Main category image
+  
+  // Rockstar category settings (featured on homepage)
+  isRockstar: boolean;
+  rockstarOrder: number | null; // 1-6 position, null if not rockstar
+  rockstarImageUrl: string | null; // Cover image for homepage display
+  
+  // Featured products limit for this category
+  featuredProductLimit: number; // Default 4
+  
+  // Metadata
+  order: number; // Display order in category list
+  productCount: number;
+  isActive: boolean;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
 }
 
-// Product document
+// Product document with home decor specific fields
 export interface Product {
   id: string;
   name: string;
   description: string;
+  shortDescription: string; // For card displays
+  
+  // Pricing
   price: number;
-  compareAtPrice: number | null;
+  compareAtPrice: number | null; // Original price for showing discount
+  
+  // Category
   categoryId: string;
-  images: string[];
-  inStock: boolean;
+  categoryName: string; // Denormalized for display
+  
+  // Images
+  images: ProductImage[];
+  primaryImageUrl: string; // Main display image
+  
+  // Inventory
   sku: string;
+  inStock: boolean;
+  stockQuantity: number;
+  
+  // Featured product settings
+  isFeatured: boolean;
+  featuredOrder: number | null; // Position on homepage, null if not featured
+  
+  // Home decor specific attributes
+  fabric: string | null; // Cotton, Silk, Linen, etc.
+  material: string | null; // Thread count, GSM, etc.
+  size: string | null; // King, Queen, Standard, Custom dimensions
+  dimensions: {
+    length: number | null;
+    width: number | null;
+    height: number | null;
+    unit: 'cm' | 'inch';
+  } | null;
+  color: string | null;
+  pattern: string | null; // Block print, Floral, Geometric, etc.
+  careInstructions: string | null;
+  
+  // Additional info
   tags: string[];
+  badge: 'new' | 'bestseller' | 'sale' | 'limited' | null;
+  
+  // Metadata
+  isActive: boolean;
   createdAt: Timestamp;
   updatedAt: Timestamp;
+}
+
+// Product image with ordering
+export interface ProductImage {
+  id: string;
+  url: string;
+  alt: string;
+  order: number;
+  isPrimary: boolean;
 }
 
 // Order status
@@ -72,25 +133,76 @@ export interface OrderItem {
   quantity: number;
   price: number;
   imageUrl: string;
+  sku: string;
+  size: string | null;
+  color: string | null;
 }
 
 // Order document
 export interface Order {
   id: string;
+  orderNumber: string; // Human-readable order number
   userId: string;
+  userEmail: string;
   items: OrderItem[];
   status: OrderStatus;
+  
+  // Pricing
+  subtotal: number;
+  shippingCost: number;
+  discount: number;
   totalAmount: number;
+  
+  // Shipping
   shippingAddress: {
     name: string;
     phone: string;
+    email: string;
     street: string;
     city: string;
     state: string;
     pincode: string;
   };
+  
+  // Payment
   paymentMethod: 'cod' | 'online';
+  paymentStatus: 'pending' | 'paid' | 'failed' | 'refunded';
+  
+  // Tracking
+  trackingNumber: string | null;
+  shippedAt: Timestamp | null;
+  deliveredAt: Timestamp | null;
+  
   notes: string | null;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
+
+// Store settings
+export interface StoreSettings {
+  id: string;
+  
+  // General
+  storeName: string;
+  storeEmail: string;
+  storePhone: string;
+  
+  // Homepage settings
+  maxRockstarCategories: number; // Default 6
+  maxFeaturedProducts: number; // Default featured per category
+  
+  // Shipping
+  freeShippingThreshold: number;
+  defaultShippingCost: number;
+  
+  // Currency
+  currency: string;
+  currencySymbol: string;
+  
+  updatedAt: Timestamp;
+}
+
+// Form types for creating/editing (without Firestore-specific fields)
+export type CategoryFormData = Omit<Category, 'id' | 'createdAt' | 'updatedAt' | 'productCount'>;
+export type ProductFormData = Omit<Product, 'id' | 'createdAt' | 'updatedAt'>;
+export type OrderFormData = Omit<Order, 'id' | 'createdAt' | 'updatedAt' | 'orderNumber'>;
