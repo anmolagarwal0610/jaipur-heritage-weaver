@@ -50,9 +50,10 @@ const FeaturedProducts = () => {
         ) : (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
             {displayProducts.map((product, index) => (
-              <div
+              <Link
                 key={product.id}
-                className="group animate-fade-in"
+                to={`/product/${product.id}`}
+                className="group animate-fade-in block"
                 style={{ animationDelay: `${index * 0.1}s` }}
               >
                 <div className="relative aspect-[3/4] rounded-lg md:rounded-xl overflow-hidden bg-secondary mb-3 md:mb-4">
@@ -69,23 +70,25 @@ const FeaturedProducts = () => {
                     </span>
                   )}
                   <button 
+                    onClick={(e) => e.preventDefault()}
                     className="absolute top-2 right-2 md:top-3 md:right-3 w-7 h-7 md:w-8 md:h-8 bg-background/80 backdrop-blur-sm rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-background"
                     aria-label={`Add ${product.name} to wishlist`}
                   >
                     <Heart className="w-3.5 h-3.5 md:w-4 md:h-4 text-foreground" />
                   </button>
                   <div className="absolute bottom-0 left-0 right-0 p-2 md:p-3 translate-y-full group-hover:translate-y-0 transition-transform">
-                    <Button className="w-full bg-gold text-gold-foreground hover:bg-gold/90 text-xs md:text-sm h-9 md:h-10">
+                    <Button 
+                      onClick={(e) => e.preventDefault()}
+                      className="w-full bg-gold text-gold-foreground hover:bg-gold/90 text-xs md:text-sm h-9 md:h-10"
+                    >
                       <ShoppingBag className="w-3.5 h-3.5 md:w-4 md:h-4 mr-1.5 md:mr-2" />
                       Add to Cart
                     </Button>
                   </div>
                 </div>
-                <Link to={`/product/${product.id}`}>
-                  <h3 className="font-serif text-xs sm:text-sm md:text-base text-foreground group-hover:text-gold transition-colors line-clamp-2">
-                    {product.name}
-                  </h3>
-                </Link>
+                <h3 className="font-serif text-xs sm:text-sm md:text-base text-foreground group-hover:text-gold transition-colors line-clamp-2">
+                  {product.name}
+                </h3>
                 <div className="flex flex-wrap items-center gap-1 sm:gap-2 mt-1">
                   <span className="font-semibold text-foreground text-sm md:text-base">
                     ₹{product.price.toLocaleString()}
@@ -101,7 +104,7 @@ const FeaturedProducts = () => {
                     </>
                   )}
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         )}
