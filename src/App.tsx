@@ -27,9 +27,11 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 
 // Admin pages
 const AdminLayout = lazy(() => import("./pages/admin/AdminLayout"));
+const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
 const CategoriesManager = lazy(() => import("./pages/admin/CategoriesManager"));
 const ProductsList = lazy(() => import("./pages/admin/ProductsList"));
 const OrdersList = lazy(() => import("./pages/admin/OrdersList"));
+const OrderDetail = lazy(() => import("./pages/admin/OrderDetail"));
 const CustomersList = lazy(() => import("./pages/admin/CustomersList"));
 const Analytics = lazy(() => import("./pages/admin/Analytics"));
 const SettingsPage = lazy(() => import("./pages/admin/Settings"));
@@ -66,9 +68,11 @@ const App = () => (
               {/* Admin Routes */}
               <Route path="/admin" element={<Admin />} />
               <Route element={<AdminLayout />}>
+                <Route path="/admin/dashboard" element={<AdminDashboard />} />
                 <Route path="/admin/products" element={<CategoriesManager />} />
                 <Route path="/admin/products/:categoryId" element={<ProductsList />} />
                 <Route path="/admin/orders" element={<OrdersList />} />
+                <Route path="/admin/orders/:orderId" element={<OrderDetail />} />
                 <Route path="/admin/customers" element={<CustomersList />} />
                 <Route path="/admin/analytics" element={<Analytics />} />
                 <Route path="/admin/settings" element={<SettingsPage />} />

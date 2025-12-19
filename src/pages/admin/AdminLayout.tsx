@@ -19,7 +19,10 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
+import { LayoutDashboard } from 'lucide-react';
+
 const navItems = [
+  { to: '/admin/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/admin/products', icon: Package, label: 'Products' },
   { to: '/admin/orders', icon: ShoppingCart, label: 'Orders' },
   { to: '/admin/customers', icon: Users, label: 'Customers' },
