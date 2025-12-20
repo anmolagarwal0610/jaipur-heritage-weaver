@@ -25,7 +25,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Heart, Minus, Plus, ShoppingBag, MessageCircle, Check, Truck } from "lucide-react";
 import { useProduct, useRelatedProducts } from "@/hooks/useProducts";
-import { useCart } from "@/hooks/useCart";
+import { useCart } from "@/contexts/CartContext";
 
 const ProductDetail = () => {
   const { productId } = useParams<{ productId: string }>();

@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/contexts/AuthContext";
+import { useCart } from "@/contexts/CartContext";
 
 const navigation = [
   { name: "Home", href: "/" },
@@ -36,6 +37,9 @@ const Header = () => {
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const { user, userProfile, logout } = useAuth();
+  const { getItemCount } = useCart();
+  
+  const cartCount = getItemCount();
 
   const handleLogout = async () => {
     try {
@@ -245,9 +249,11 @@ const Header = () => {
               <Link to="/cart">
                 <Button variant="ghost" size="icon" className="relative h-10 w-10" aria-label="Shopping cart">
                   <ShoppingBag className="h-4 w-4" />
-                  <span className="absolute -top-0.5 -right-0.5 bg-gold text-gold-foreground text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-medium">
-                    0
-                  </span>
+                  {cartCount > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 bg-gold text-gold-foreground text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-medium">
+                      {cartCount > 9 ? '9+' : cartCount}
+                    </span>
+                  )}
                 </Button>
               </Link>
             </div>
