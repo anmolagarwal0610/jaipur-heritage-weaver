@@ -14,21 +14,19 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 
-// Core pages - load immediately for fast initial render
-import Index from "./pages/Index";
-import Shop from "./pages/Shop";
-import ProductDetail from "./pages/ProductDetail";
-import OurStory from "./pages/OurStory";
-import Contact from "./pages/Contact";
-import Cart from "./pages/Cart";
-import NotFound from "./pages/NotFound";
-
-// Auth and dashboard pages - lazy load (less frequently accessed)
+// All pages are lazy loaded for consistent behavior
+const Index = lazy(() => import("./pages/Index"));
+const Shop = lazy(() => import("./pages/Shop"));
+const ProductDetail = lazy(() => import("./pages/ProductDetail"));
+const OurStory = lazy(() => import("./pages/OurStory"));
+const Contact = lazy(() => import("./pages/Contact"));
+const Cart = lazy(() => import("./pages/Cart"));
+const NotFound = lazy(() => import("./pages/NotFound"));
 const Auth = lazy(() => import("./pages/Auth"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Admin = lazy(() => import("./pages/Admin"));
 
-// Admin pages - lazy load (admin-only access)
+// Admin pages
 const AdminLayout = lazy(() => import("./pages/admin/AdminLayout"));
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
 const CategoriesManager = lazy(() => import("./pages/admin/CategoriesManager"));
@@ -51,13 +49,10 @@ const queryClient = new QueryClient({
   },
 });
 
-// Loading fallback component for lazy-loaded pages
+// Minimal loading fallback - just a subtle spinner
 const PageLoader = () => (
   <div className="min-h-screen flex items-center justify-center bg-background">
-    <div className="text-center">
-      <div className="w-8 h-8 border-2 border-gold border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-      <p className="text-muted-foreground text-sm">Loading...</p>
-    </div>
+    <div className="w-6 h-6 border-2 border-gold border-t-transparent rounded-full animate-spin" />
   </div>
 );
 
@@ -68,86 +63,38 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
-          <Routes>
-            {/* Core pages - no suspense needed (directly imported) */}
-            <Route path="/" element={<Index />} />
-            <Route path="/shop" element={<Shop />} />
-            <Route path="/product/:productId" element={<ProductDetail />} />
-            <Route path="/our-story" element={<OurStory />} />
-            <Route path="/contact" element={<Contact />} />
-            <Route path="/cart" element={<Cart />} />
-            
-            {/* Auth and dashboard - lazy loaded with suspense */}
-            <Route path="/auth" element={
-              <Suspense fallback={<PageLoader />}>
-                <Auth />
-              </Suspense>
-            } />
-            <Route path="/dashboard" element={
-              <Suspense fallback={<PageLoader />}>
-                <Dashboard />
-              </Suspense>
-            } />
-            
-            {/* Admin Routes - accessible via /dashboard/admin */}
-            <Route path="/dashboard/admin" element={
-              <Suspense fallback={<PageLoader />}>
-                <Admin />
-              </Suspense>
-            } />
-            <Route element={
-              <Suspense fallback={<PageLoader />}>
-                <AdminLayout />
-              </Suspense>
-            }>
-              <Route path="/dashboard/admin/home" element={
-                <Suspense fallback={<PageLoader />}>
-                  <AdminDashboard />
-                </Suspense>
-              } />
-              <Route path="/dashboard/admin/products" element={
-                <Suspense fallback={<PageLoader />}>
-                  <CategoriesManager />
-                </Suspense>
-              } />
-              <Route path="/dashboard/admin/products/:categoryId" element={
-                <Suspense fallback={<PageLoader />}>
-                  <ProductsList />
-                </Suspense>
-              } />
-              <Route path="/dashboard/admin/orders" element={
-                <Suspense fallback={<PageLoader />}>
-                  <OrdersList />
-                </Suspense>
-              } />
-              <Route path="/dashboard/admin/orders/:orderId" element={
-                <Suspense fallback={<PageLoader />}>
-                  <OrderDetail />
-                </Suspense>
-              } />
-              <Route path="/dashboard/admin/customers" element={
-                <Suspense fallback={<PageLoader />}>
-                  <CustomersList />
-                </Suspense>
-              } />
-              <Route path="/dashboard/admin/analytics" element={
-                <Suspense fallback={<PageLoader />}>
-                  <Analytics />
-                </Suspense>
-              } />
-              <Route path="/dashboard/admin/settings" element={
-                <Suspense fallback={<PageLoader />}>
-                  <SettingsPage />
-                </Suspense>
-              } />
-            </Route>
-            
-            {/* Explicit 404 for old /admin path */}
-            <Route path="/admin" element={<NotFound />} />
-            <Route path="/admin/*" element={<NotFound />} />
-            
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <Suspense fallback={<PageLoader />}>
+            <Routes>
+              {/* Public pages */}
+              <Route path="/" element={<Index />} />
+              <Route path="/shop" element={<Shop />} />
+              <Route path="/product/:productId" element={<ProductDetail />} />
+              <Route path="/our-story" element={<OurStory />} />
+              <Route path="/contact" element={<Contact />} />
+              <Route path="/cart" element={<Cart />} />
+              <Route path="/auth" element={<Auth />} />
+              <Route path="/dashboard" element={<Dashboard />} />
+              
+              {/* Admin Routes - accessible via /dashboard/admin */}
+              <Route path="/dashboard/admin" element={<Admin />} />
+              <Route element={<AdminLayout />}>
+                <Route path="/dashboard/admin/home" element={<AdminDashboard />} />
+                <Route path="/dashboard/admin/products" element={<CategoriesManager />} />
+                <Route path="/dashboard/admin/products/:categoryId" element={<ProductsList />} />
+                <Route path="/dashboard/admin/orders" element={<OrdersList />} />
+                <Route path="/dashboard/admin/orders/:orderId" element={<OrderDetail />} />
+                <Route path="/dashboard/admin/customers" element={<CustomersList />} />
+                <Route path="/dashboard/admin/analytics" element={<Analytics />} />
+                <Route path="/dashboard/admin/settings" element={<SettingsPage />} />
+              </Route>
+              
+              {/* Explicit 404 for old /admin path */}
+              <Route path="/admin" element={<NotFound />} />
+              <Route path="/admin/*" element={<NotFound />} />
+              
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </Suspense>
         </BrowserRouter>
       </TooltipProvider>
     </AuthProvider>
