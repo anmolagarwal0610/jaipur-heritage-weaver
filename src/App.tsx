@@ -11,17 +11,19 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 
-// All pages are lazy loaded for consistent behavior
-const Index = lazy(() => import("./pages/Index"));
-const Shop = lazy(() => import("./pages/Shop"));
-const ProductDetail = lazy(() => import("./pages/ProductDetail"));
-const OurStory = lazy(() => import("./pages/OurStory"));
-const Contact = lazy(() => import("./pages/Contact"));
-const Cart = lazy(() => import("./pages/Cart"));
-const NotFound = lazy(() => import("./pages/NotFound"));
+// Eager-load main pages to avoid showing the full-page loader on every navigation
+import Index from "./pages/Index";
+import Shop from "./pages/Shop";
+import ProductDetail from "./pages/ProductDetail";
+import OurStory from "./pages/OurStory";
+import Contact from "./pages/Contact";
+import Cart from "./pages/Cart";
+import NotFound from "./pages/NotFound";
+
+// Lazy-load heavier/rarely-visited areas
 const Auth = lazy(() => import("./pages/Auth"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Admin = lazy(() => import("./pages/Admin"));
@@ -88,10 +90,10 @@ const App = () => (
                 <Route path="/dashboard/admin/settings" element={<SettingsPage />} />
               </Route>
               
-              {/* Explicit 404 for old /admin path */}
-              <Route path="/admin" element={<NotFound />} />
-              <Route path="/admin/*" element={<NotFound />} />
-              
+              {/* Admin URL compatibility redirects */}
+              <Route path="/admin" element={<Navigate to="/dashboard/admin" replace />} />
+              <Route path="/admin/dashboard" element={<Navigate to="/dashboard/admin/home" replace />} />
+              <Route path="/admin/*" element={<Navigate to="/dashboard/admin" replace />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
