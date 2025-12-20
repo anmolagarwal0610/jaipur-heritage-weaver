@@ -24,33 +24,25 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Heart, Minus, Plus, ShoppingBag, MessageCircle, Check, Truck } from "lucide-react";
-import { useProducts } from "@/hooks/useProducts";
+import { useProduct, useRelatedProducts } from "@/hooks/useProducts";
 import { useCart } from "@/hooks/useCart";
-import { Product } from "@/lib/firebase-types";
 
 const ProductDetail = () => {
   const { productId } = useParams<{ productId: string }>();
-  const { products, loading } = useProducts();
+  const { product, loading } = useProduct(productId);
+  const { relatedProducts } = useRelatedProducts(product?.categoryId, productId);
   const { addToCart } = useCart();
   
-  const [product, setProduct] = useState<Product | null>(null);
   const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [selectedSize, setSelectedSize] = useState<string>("");
 
+  // Set default size when product loads
   useEffect(() => {
-    if (products.length > 0 && productId) {
-      const found = products.find(p => p.id === productId);
-      setProduct(found || null);
-      if (found?.size) {
-        setSelectedSize(found.size);
-      }
+    if (product?.size) {
+      setSelectedSize(product.size);
     }
-  }, [products, productId]);
-
-  const relatedProducts = products
-    .filter(p => p.categoryId === product?.categoryId && p.id !== product?.id && p.isActive)
-    .slice(0, 4);
+  }, [product?.size]);
 
   const handleAddToCart = () => {
     if (product) {
@@ -433,7 +425,7 @@ const ProductDetail = () => {
                   <h3 className="font-serif text-sm text-foreground group-hover:text-gold transition-colors line-clamp-2">
                     {relProduct.name}
                   </h3>
-                  <p className="text-sm font-semibold text-foreground mt-1">
+                  <p className="font-semibold text-foreground mt-1">
                     ₹{relProduct.price.toLocaleString()}
                   </p>
                 </Link>
