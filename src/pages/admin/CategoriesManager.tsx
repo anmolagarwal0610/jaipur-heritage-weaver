@@ -263,7 +263,7 @@ export default function CategoriesManager() {
                   <TableRow 
                     key={category.id} 
                     className="cursor-pointer hover:bg-muted/50"
-                    onClick={() => navigate(`/admin/products/${category.id}`)}
+                    onClick={() => navigate(`/dashboard/admin/products/${category.id}`)}
                   >
                     <TableCell>
                       <div className="w-12 h-12 rounded-md overflow-hidden bg-muted">
@@ -297,7 +297,7 @@ export default function CategoriesManager() {
                         className="cursor-pointer hover:bg-primary hover:text-primary-foreground"
                         onClick={(e) => {
                           e.stopPropagation();
-                          navigate(`/admin/products/${category.id}`);
+                          navigate(`/dashboard/admin/products/${category.id}`);
                         }}
                       >
                         {category.productCount} <ChevronRight className="h-3 w-3 ml-1 inline" />

@@ -67,18 +67,22 @@ const App = () => (
               <Route path="/auth" element={<Auth />} />
               <Route path="/dashboard" element={<Dashboard />} />
               
-              {/* Admin Routes */}
-              <Route path="/admin" element={<Admin />} />
+              {/* Admin Routes - accessible via /dashboard/admin */}
+              <Route path="/dashboard/admin" element={<Admin />} />
               <Route element={<AdminLayout />}>
-                <Route path="/admin/dashboard" element={<AdminDashboard />} />
-                <Route path="/admin/products" element={<CategoriesManager />} />
-                <Route path="/admin/products/:categoryId" element={<ProductsList />} />
-                <Route path="/admin/orders" element={<OrdersList />} />
-                <Route path="/admin/orders/:orderId" element={<OrderDetail />} />
-                <Route path="/admin/customers" element={<CustomersList />} />
-                <Route path="/admin/analytics" element={<Analytics />} />
-                <Route path="/admin/settings" element={<SettingsPage />} />
+                <Route path="/dashboard/admin/home" element={<AdminDashboard />} />
+                <Route path="/dashboard/admin/products" element={<CategoriesManager />} />
+                <Route path="/dashboard/admin/products/:categoryId" element={<ProductsList />} />
+                <Route path="/dashboard/admin/orders" element={<OrdersList />} />
+                <Route path="/dashboard/admin/orders/:orderId" element={<OrderDetail />} />
+                <Route path="/dashboard/admin/customers" element={<CustomersList />} />
+                <Route path="/dashboard/admin/analytics" element={<Analytics />} />
+                <Route path="/dashboard/admin/settings" element={<SettingsPage />} />
               </Route>
+              
+              {/* Explicit 404 for old /admin path */}
+              <Route path="/admin" element={<NotFound />} />
+              <Route path="/admin/*" element={<NotFound />} />
               
               <Route path="*" element={<NotFound />} />
             </Routes>
