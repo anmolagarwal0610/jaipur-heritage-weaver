@@ -13,6 +13,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { CartProvider } from "@/contexts/CartContext";
 
 // Eager-load main pages to avoid showing the full-page loader on every navigation
 import Index from "./pages/Index";
@@ -21,6 +22,8 @@ import ProductDetail from "./pages/ProductDetail";
 import OurStory from "./pages/OurStory";
 import Contact from "./pages/Contact";
 import Cart from "./pages/Cart";
+import Checkout from "./pages/Checkout";
+import OrderConfirmation from "./pages/OrderConfirmation";
 import NotFound from "./pages/NotFound";
 
 // Lazy-load auth/dashboard pages (less frequently visited)
@@ -61,46 +64,50 @@ const PageLoader = () => (
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Suspense fallback={<PageLoader />}>
-            <Routes>
-              {/* Public pages */}
-              <Route path="/" element={<Index />} />
-              <Route path="/shop" element={<Shop />} />
-              <Route path="/product/:productId" element={<ProductDetail />} />
-              <Route path="/our-story" element={<OurStory />} />
-              <Route path="/contact" element={<Contact />} />
-              <Route path="/cart" element={<Cart />} />
-              <Route path="/auth" element={<Auth />} />
-              <Route path="/dashboard" element={<Dashboard />} />
-              
-              {/* Admin Routes - Admin.tsx wraps ALL admin routes for password protection */}
-              <Route path="/dashboard/admin" element={<Admin />}>
-                <Route element={<AdminLayout />}>
-                  <Route index element={<Navigate to="home" replace />} />
-                  <Route path="home" element={<AdminDashboard />} />
-                  <Route path="products" element={<CategoriesManager />} />
-                  <Route path="products/:categoryId" element={<ProductsList />} />
-                  <Route path="orders" element={<OrdersList />} />
-                  <Route path="orders/:orderId" element={<OrderDetail />} />
-                  <Route path="customers" element={<CustomersList />} />
-                  <Route path="analytics" element={<Analytics />} />
-                  <Route path="settings" element={<SettingsPage />} />
+      <CartProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Suspense fallback={<PageLoader />}>
+              <Routes>
+                {/* Public pages */}
+                <Route path="/" element={<Index />} />
+                <Route path="/shop" element={<Shop />} />
+                <Route path="/product/:productId" element={<ProductDetail />} />
+                <Route path="/our-story" element={<OurStory />} />
+                <Route path="/contact" element={<Contact />} />
+                <Route path="/cart" element={<Cart />} />
+                <Route path="/checkout" element={<Checkout />} />
+                <Route path="/order-confirmation/:orderId" element={<OrderConfirmation />} />
+                <Route path="/auth" element={<Auth />} />
+                <Route path="/dashboard" element={<Dashboard />} />
+                
+                {/* Admin Routes - Admin.tsx wraps ALL admin routes for password protection */}
+                <Route path="/dashboard/admin" element={<Admin />}>
+                  <Route element={<AdminLayout />}>
+                    <Route index element={<Navigate to="home" replace />} />
+                    <Route path="home" element={<AdminDashboard />} />
+                    <Route path="products" element={<CategoriesManager />} />
+                    <Route path="products/:categoryId" element={<ProductsList />} />
+                    <Route path="orders" element={<OrdersList />} />
+                    <Route path="orders/:orderId" element={<OrderDetail />} />
+                    <Route path="customers" element={<CustomersList />} />
+                    <Route path="analytics" element={<Analytics />} />
+                    <Route path="settings" element={<SettingsPage />} />
+                  </Route>
                 </Route>
-              </Route>
-              
-              {/* Admin URL compatibility redirects */}
-              <Route path="/admin" element={<Navigate to="/dashboard/admin" replace />} />
-              <Route path="/admin/dashboard" element={<Navigate to="/dashboard/admin/home" replace />} />
-              <Route path="/admin/*" element={<Navigate to="/dashboard/admin" replace />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </Suspense>
-        </BrowserRouter>
-      </TooltipProvider>
+                
+                {/* Admin URL compatibility redirects */}
+                <Route path="/admin" element={<Navigate to="/dashboard/admin" replace />} />
+                <Route path="/admin/dashboard" element={<Navigate to="/dashboard/admin/home" replace />} />
+                <Route path="/admin/*" element={<Navigate to="/dashboard/admin" replace />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </Suspense>
+          </BrowserRouter>
+        </TooltipProvider>
+      </CartProvider>
     </AuthProvider>
   </QueryClientProvider>
 );

@@ -1,10 +1,6 @@
 /**
- * MOBILE RESPONSIVENESS GUIDELINES:
- * - Grid stacks on mobile (single column)
- * - Cart items responsive with smaller images on mobile
- * - Touch targets minimum 44x44px
- * - Images use lazy loading
- * - Maintain responsive design in all future edits
+ * Shopping Cart Page
+ * Features: Real cart data, quantity controls, remove items, order summary
  */
 
 import { Link } from "react-router-dom";
@@ -12,40 +8,31 @@ import Layout from "@/components/layout/Layout";
 import SEO from "@/components/SEO";
 import { Button } from "@/components/ui/button";
 import { Trash2, Plus, Minus, ShoppingBag, ArrowRight, MessageCircle } from "lucide-react";
-
-const cartItems = [
-  {
-    id: 1,
-    name: "Royal Blue Jaipuri Bedsheet Set",
-    price: 1499,
-    quantity: 1,
-    image: "https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?auto=format&fit=crop&w=300&q=80",
-    size: "King Size",
-  },
-  {
-    id: 2,
-    name: "Floral Block Print Quilt",
-    price: 2999,
-    quantity: 2,
-    image: "https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?auto=format&fit=crop&w=300&q=80",
-    size: "Double Bed",
-  },
-];
+import { useCart } from "@/contexts/CartContext";
 
 const Cart = () => {
-  const subtotal = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
-  const shipping = subtotal >= 999 ? 0 : 99;
-  const total = subtotal + shipping;
+  const { 
+    items, 
+    removeFromCart, 
+    updateQuantity, 
+    getSubtotal, 
+    getShipping, 
+    getTotal 
+  } = useCart();
+
+  const subtotal = getSubtotal();
+  const shipping = getShipping(subtotal);
+  const total = getTotal();
 
   const handleWhatsAppOrder = () => {
-    const message = `Hi! I'd like to place an order:\n\n${cartItems.map(item => 
-      `• ${item.name} (${item.size}) x${item.quantity} - ₹${(item.price * item.quantity).toLocaleString()}`
+    const message = `Hi! I'd like to place an order:\n\n${items.map(item => 
+      `• ${item.name}${item.size ? ` (${item.size})` : ''} x${item.quantity} - ₹${(item.price * item.quantity).toLocaleString()}`
     ).join('\n')}\n\nSubtotal: ₹${subtotal.toLocaleString()}\nShipping: ${shipping === 0 ? 'Free' : `₹${shipping}`}\nTotal: ₹${total.toLocaleString()}`;
     
     window.open(`https://wa.me/919887238849?text=${encodeURIComponent(message)}`, '_blank');
   };
 
-  if (cartItems.length === 0) {
+  if (items.length === 0) {
     return (
       <Layout>
         <SEO 
@@ -99,9 +86,9 @@ const Cart = () => {
         <div className="grid lg:grid-cols-3 gap-6 lg:gap-8">
           {/* Cart Items */}
           <div className="lg:col-span-2 space-y-3 md:space-y-4">
-            {cartItems.map((item) => (
+            {items.map((item) => (
               <div
-                key={item.id}
+                key={`${item.productId}-${item.size}`}
                 className="flex gap-3 md:gap-4 p-3 md:p-4 bg-card border border-border rounded-lg md:rounded-xl"
               >
                 <div className="w-20 h-20 sm:w-24 sm:h-24 md:w-32 md:h-32 rounded-md md:rounded-lg overflow-hidden bg-secondary shrink-0">
@@ -114,26 +101,47 @@ const Cart = () => {
                   />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <Link to={`/product/${item.id}`}>
+                  <Link to={`/product/${item.productId}`}>
                     <h3 className="font-serif font-semibold text-foreground hover:text-gold transition-colors text-sm md:text-base line-clamp-2">
                       {item.name}
                     </h3>
                   </Link>
-                  <p className="text-muted-foreground text-xs md:text-sm mt-0.5 md:mt-1">{item.size}</p>
+                  {item.size && (
+                    <p className="text-muted-foreground text-xs md:text-sm mt-0.5 md:mt-1">{item.size}</p>
+                  )}
                   <p className="font-semibold text-foreground mt-1 md:mt-2 text-sm md:text-base">
                     ₹{item.price.toLocaleString()}
                   </p>
                   <div className="flex items-center justify-between mt-2 md:mt-4">
                     <div className="flex items-center gap-1 md:gap-2">
-                      <Button variant="outline" size="icon" className="h-8 w-8 md:h-9 md:w-9" aria-label="Decrease quantity">
+                      <Button 
+                        variant="outline" 
+                        size="icon" 
+                        className="h-8 w-8 md:h-9 md:w-9" 
+                        aria-label="Decrease quantity"
+                        onClick={() => updateQuantity(item.productId, item.size, item.quantity - 1)}
+                        disabled={item.quantity <= 1}
+                      >
                         <Minus className="h-3 w-3" />
                       </Button>
                       <span className="w-6 md:w-8 text-center text-sm md:text-base">{item.quantity}</span>
-                      <Button variant="outline" size="icon" className="h-8 w-8 md:h-9 md:w-9" aria-label="Increase quantity">
+                      <Button 
+                        variant="outline" 
+                        size="icon" 
+                        className="h-8 w-8 md:h-9 md:w-9" 
+                        aria-label="Increase quantity"
+                        onClick={() => updateQuantity(item.productId, item.size, item.quantity + 1)}
+                      >
                         <Plus className="h-3 w-3" />
                       </Button>
                     </div>
-                    <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive h-9 w-9" aria-label="Remove item">
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="text-destructive hover:text-destructive h-9 w-9" 
+                      aria-label="Remove item"
+                      onClick={() => removeFromCart(item.productId, item.size)}
+                    >
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
@@ -176,12 +184,19 @@ const Cart = () => {
               </div>
 
               <div className="mt-4 md:mt-6 space-y-3">
+                <Link to="/checkout">
+                  <Button className="w-full bg-gold text-gold-foreground hover:bg-gold/90 h-11 md:h-12">
+                    Proceed to Checkout
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </Link>
                 <Button 
-                  className="w-full bg-gold text-gold-foreground hover:bg-gold/90 h-11 md:h-12"
+                  variant="outline"
+                  className="w-full border-olive text-olive hover:bg-olive hover:text-olive-foreground h-10 md:h-11"
                   onClick={handleWhatsAppOrder}
                 >
                   <MessageCircle className="mr-2 h-4 w-4" />
-                  Order via WhatsApp
+                  Quick Order via WhatsApp
                 </Button>
                 <p className="text-xs text-center text-muted-foreground">
                   COD & Online Payment Available
@@ -190,7 +205,7 @@ const Cart = () => {
 
               <div className="mt-4 md:mt-6 pt-4 md:pt-6 border-t border-border">
                 <Link to="/shop">
-                  <Button variant="outline" className="w-full h-10 md:h-11">
+                  <Button variant="ghost" className="w-full h-10 md:h-11">
                     Continue Shopping
                   </Button>
                 </Link>
