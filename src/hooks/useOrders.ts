@@ -1,13 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { 
   collection, 
   query, 
   orderBy, 
-  onSnapshot,
+  getDocs,
   doc,
   updateDoc,
   serverTimestamp,
-  where
+  where,
+  getDoc
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Order, OrderStatus } from '@/lib/firebase-types';
@@ -17,40 +18,32 @@ interface UseOrdersOptions {
   limit?: number;
 }
 
+async function fetchOrders(status?: OrderStatus): Promise<Order[]> {
+  const ordersRef = collection(db, 'orders');
+  let q = query(ordersRef, orderBy('createdAt', 'desc'));
+
+  if (status) {
+    q = query(ordersRef, where('status', '==', status), orderBy('createdAt', 'desc'));
+  }
+
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data(),
+    createdAt: doc.data().createdAt?.toDate?.() || new Date(),
+    updatedAt: doc.data().updatedAt?.toDate?.() || new Date(),
+  })) as Order[];
+}
+
 export function useOrders(options: UseOrdersOptions = {}) {
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const ordersRef = collection(db, 'orders');
-    let q = query(ordersRef, orderBy('createdAt', 'desc'));
-
-    if (options.status) {
-      q = query(ordersRef, where('status', '==', options.status), orderBy('createdAt', 'desc'));
-    }
-
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        const ordersData = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-          createdAt: doc.data().createdAt?.toDate?.() || new Date(),
-          updatedAt: doc.data().updatedAt?.toDate?.() || new Date(),
-        })) as Order[];
-        setOrders(ordersData);
-        setLoading(false);
-      },
-      (err) => {
-        console.error('Error fetching orders:', err);
-        setError(err.message);
-        setLoading(false);
-      }
-    );
-
-    return () => unsubscribe();
-  }, [options.status]);
+  const queryClient = useQueryClient();
+  
+  const { data: orders = [], isLoading: loading, error } = useQuery({
+    queryKey: ['admin', 'orders', options.status],
+    queryFn: () => fetchOrders(options.status),
+    staleTime: 1000 * 60 * 2, // 2 minutes
+    gcTime: 1000 * 60 * 10, // 10 minutes cache
+  });
 
   const updateOrderStatus = async (orderId: string, status: OrderStatus) => {
     try {
@@ -59,6 +52,8 @@ export function useOrders(options: UseOrdersOptions = {}) {
         status,
         updatedAt: serverTimestamp(),
       });
+      // Invalidate cache to refetch
+      queryClient.invalidateQueries({ queryKey: ['admin', 'orders'] });
     } catch (err: any) {
       console.error('Error updating order status:', err);
       throw err;
@@ -72,6 +67,7 @@ export function useOrders(options: UseOrdersOptions = {}) {
         trackingNumber,
         updatedAt: serverTimestamp(),
       });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'orders'] });
     } catch (err: any) {
       console.error('Error updating tracking number:', err);
       throw err;
@@ -91,6 +87,7 @@ export function useOrders(options: UseOrdersOptions = {}) {
         notes: newNotes,
         updatedAt: serverTimestamp(),
       });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'orders'] });
     } catch (err: any) {
       console.error('Error adding order note:', err);
       throw err;
@@ -113,7 +110,7 @@ export function useOrders(options: UseOrdersOptions = {}) {
   return {
     orders,
     loading,
-    error,
+    error: error ? (error as Error).message : null,
     stats,
     updateOrderStatus,
     updateTrackingNumber,
@@ -121,43 +118,35 @@ export function useOrders(options: UseOrdersOptions = {}) {
   };
 }
 
+async function fetchOrder(orderId: string): Promise<Order | null> {
+  const orderRef = doc(db, 'orders', orderId);
+  const snapshot = await getDoc(orderRef);
+  
+  if (!snapshot.exists()) {
+    return null;
+  }
+  
+  const data = snapshot.data();
+  return {
+    id: snapshot.id,
+    ...data,
+    createdAt: data.createdAt?.toDate?.() || new Date(),
+    updatedAt: data.updatedAt?.toDate?.() || new Date(),
+  } as Order;
+}
+
 export function useOrder(orderId: string | undefined) {
-  const [order, setOrder] = useState<Order | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { data: order = null, isLoading: loading, error } = useQuery({
+    queryKey: ['admin', 'order', orderId],
+    queryFn: () => fetchOrder(orderId!),
+    enabled: !!orderId,
+    staleTime: 1000 * 60 * 2,
+    gcTime: 1000 * 60 * 10,
+  });
 
-  useEffect(() => {
-    if (!orderId) {
-      setLoading(false);
-      return;
-    }
-
-    const orderRef = doc(db, 'orders', orderId);
-    const unsubscribe = onSnapshot(
-      orderRef,
-      (snapshot) => {
-        if (snapshot.exists()) {
-          const data = snapshot.data();
-          setOrder({
-            id: snapshot.id,
-            ...data,
-            createdAt: data.createdAt?.toDate?.() || new Date(),
-            updatedAt: data.updatedAt?.toDate?.() || new Date(),
-          } as Order);
-        } else {
-          setOrder(null);
-        }
-        setLoading(false);
-      },
-      (err) => {
-        console.error('Error fetching order:', err);
-        setError(err.message);
-        setLoading(false);
-      }
-    );
-
-    return () => unsubscribe();
-  }, [orderId]);
-
-  return { order, loading, error };
+  return { 
+    order, 
+    loading, 
+    error: error ? (error as Error).message : null 
+  };
 }

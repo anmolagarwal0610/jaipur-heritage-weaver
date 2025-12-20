@@ -3,10 +3,13 @@
  *
  * Requires admin role to access. Verifies via useAdminRole hook.
  * Admin roles are stored in user_roles collection in Firestore.
+ * 
+ * Password protection layer: All admin child routes flow through this component.
+ * Verification state is stored in sessionStorage for the session duration.
  */
 
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Outlet } from "react-router-dom";
 import { doc, getDocFromServer, setDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
@@ -16,8 +19,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Shield, Lock, Eye, EyeOff, AlertTriangle, Loader2 } from "lucide-react";
+import { Lock, Eye, EyeOff, AlertTriangle, Loader2 } from "lucide-react";
 import SEO from "@/components/SEO";
+
+const ADMIN_SESSION_KEY = 'admin_console_verified';
 
 // Helper function to fetch with retry
 const fetchWithRetry = async <T,>(
@@ -46,7 +51,10 @@ const Admin = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isVerified, setIsVerified] = useState(false);
+  const [isVerified, setIsVerified] = useState(() => {
+    // Check sessionStorage on mount
+    return sessionStorage.getItem(ADMIN_SESSION_KEY) === 'true';
+  });
   const [setupRequired, setSetupRequired] = useState<boolean | null>(null);
   const [checkingSetup, setCheckingSetup] = useState(true);
 
@@ -57,6 +65,13 @@ const Admin = () => {
 
     const checkAdminSetup = async () => {
       if (!user || !isAdmin) return;
+
+      // If already verified via session, skip the password check
+      if (sessionStorage.getItem(ADMIN_SESSION_KEY) === 'true') {
+        setIsVerified(true);
+        setCheckingSetup(false);
+        return;
+      }
 
       try {
         const settingsRef = doc(db, "admin_settings", "console");
@@ -138,6 +153,8 @@ const Admin = () => {
         updatedAt: serverTimestamp(),
       });
 
+      // Store verification in session
+      sessionStorage.setItem(ADMIN_SESSION_KEY, 'true');
       setIsVerified(true);
       toast({
         title: "Admin console ready",
@@ -177,6 +194,8 @@ const Admin = () => {
       const inputHash = await hashPassword(password);
 
       if (inputHash === storedHash) {
+        // Store verification in session
+        sessionStorage.setItem(ADMIN_SESSION_KEY, 'true');
         setIsVerified(true);
         toast({
           title: "Access granted",
@@ -238,10 +257,9 @@ const Admin = () => {
     );
   }
 
-  // Admin console (after verification) - redirect to dashboard
+  // Admin verified - render child routes via Outlet
   if (isVerified) {
-    navigate('/dashboard/admin/home');
-    return null;
+    return <Outlet />;
   }
 
   // Password setup or verification form
