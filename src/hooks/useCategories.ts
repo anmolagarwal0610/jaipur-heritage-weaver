@@ -1,9 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { 
   collection, 
   query, 
   orderBy, 
-  onSnapshot, 
   doc, 
   addDoc, 
   updateDoc, 
@@ -19,36 +19,26 @@ import { useToast } from '@/hooks/use-toast';
 const COLLECTION_NAME = 'categories';
 const MAX_ROCKSTAR_CATEGORIES = 6;
 
+// Fetch categories from Firestore
+async function fetchCategories(): Promise<Category[]> {
+  const q = query(collection(db, COLLECTION_NAME), orderBy('order', 'asc'));
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map((docSnap) => ({
+    id: docSnap.id,
+    ...(docSnap.data() as Omit<Category, 'id'>)
+  }));
+}
+
 export function useCategories() {
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
-  // Subscribe to categories collection
-  useEffect(() => {
-    const q = query(collection(db, COLLECTION_NAME), orderBy('order', 'asc'));
-    
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        const cats: Category[] = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data()
-        })) as Category[];
-        setCategories(cats);
-        setLoading(false);
-        setError(null);
-      },
-      (err) => {
-        console.error('Error fetching categories:', err);
-        setError(err.message);
-        setLoading(false);
-      }
-    );
-
-    return () => unsubscribe();
-  }, []);
+  // Use React Query for caching and instant back navigation
+  const { data: categories = [], isLoading: loading, error } = useQuery({
+    queryKey: ['categories'],
+    queryFn: fetchCategories,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
 
   // Get rockstar categories (sorted by rockstarOrder)
   const rockstarCategories = categories
@@ -64,6 +54,11 @@ export function useCategories() {
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-|-$/g, '');
+  };
+
+  // Invalidate cache to refresh data
+  const invalidateCategories = () => {
+    queryClient.invalidateQueries({ queryKey: ['categories'] });
   };
 
   // Create category
@@ -89,6 +84,7 @@ export function useCategories() {
       };
 
       await addDoc(collection(db, COLLECTION_NAME), categoryData);
+      invalidateCategories();
       
       toast({
         title: 'Category created',
@@ -105,7 +101,7 @@ export function useCategories() {
       });
       return false;
     }
-  }, [categories.length, rockstarCategories.length, toast]);
+  }, [categories.length, rockstarCategories.length, toast, queryClient]);
 
   // Update category
   const updateCategory = useCallback(async (id: string, data: Partial<CategoryFormData>) => {
@@ -133,6 +129,7 @@ export function useCategories() {
       }
 
       await updateDoc(doc(db, COLLECTION_NAME, id), updateData);
+      invalidateCategories();
       
       toast({
         title: 'Category updated',
@@ -149,7 +146,7 @@ export function useCategories() {
       });
       return false;
     }
-  }, [categories, rockstarCategories.length, toast]);
+  }, [categories, rockstarCategories.length, toast, queryClient]);
 
   // Delete category
   const deleteCategory = useCallback(async (id: string) => {
@@ -171,6 +168,7 @@ export function useCategories() {
       }
 
       await deleteDoc(doc(db, COLLECTION_NAME, id));
+      invalidateCategories();
       
       toast({
         title: 'Category deleted',
@@ -187,7 +185,7 @@ export function useCategories() {
       });
       return false;
     }
-  }, [toast]);
+  }, [toast, queryClient]);
 
   // Update rockstar order
   const updateRockstarOrder = useCallback(async (categoryId: string, newOrder: number) => {
@@ -248,6 +246,7 @@ export function useCategories() {
       );
 
       await Promise.all(updates);
+      invalidateCategories();
       
       toast({
         title: 'Order updated',
@@ -264,13 +263,13 @@ export function useCategories() {
       });
       return false;
     }
-  }, [categories, rockstarCategories, toast]);
+  }, [categories, rockstarCategories, toast, queryClient]);
 
   return {
     categories,
     rockstarCategories,
     loading,
-    error,
+    error: error?.message || null,
     canAddRockstar,
     maxRockstarCategories: MAX_ROCKSTAR_CATEGORIES,
     createCategory,

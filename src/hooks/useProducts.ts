@@ -1,10 +1,10 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   collection,
   query,
   where,
   orderBy,
-  onSnapshot,
   doc,
   addDoc,
   updateDoc,
@@ -12,6 +12,7 @@ import {
   serverTimestamp,
   increment,
   getDocs,
+  getDoc,
   writeBatch
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -23,56 +24,89 @@ interface UseProductsOptions {
   featuredOnly?: boolean;
 }
 
-export function useProducts(options: UseProductsOptions = {}) {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
-  const { toast } = useToast();
+// Fetch products from Firestore
+async function fetchProducts(options: UseProductsOptions = {}): Promise<Product[]> {
+  const { categoryId, featuredOnly } = options;
+  
+  let q;
+  
+  if (featuredOnly) {
+    q = query(
+      collection(db, 'products'),
+      where('isFeatured', '==', true),
+      orderBy('featuredOrder', 'asc')
+    );
+  } else if (categoryId) {
+    q = query(
+      collection(db, 'products'),
+      where('categoryId', '==', categoryId),
+      orderBy('createdAt', 'desc')
+    );
+  } else {
+    q = query(collection(db, 'products'), orderBy('createdAt', 'desc'));
+  }
 
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map((docSnap) => ({
+    id: docSnap.id,
+    ...(docSnap.data() as Omit<Product, 'id'>)
+  }));
+}
+
+// Fetch single product by ID
+async function fetchProductById(productId: string): Promise<Product | null> {
+  const docRef = doc(db, 'products', productId);
+  const docSnap = await getDoc(docRef);
+  
+  if (!docSnap.exists()) {
+    return null;
+  }
+  
+  return {
+    id: docSnap.id,
+    ...(docSnap.data() as Omit<Product, 'id'>)
+  };
+}
+
+// Fetch related products by category
+async function fetchRelatedProducts(categoryId: string, excludeProductId: string): Promise<Product[]> {
+  const q = query(
+    collection(db, 'products'),
+    where('categoryId', '==', categoryId),
+    where('isActive', '==', true),
+    orderBy('createdAt', 'desc')
+  );
+  
+  const snapshot = await getDocs(q);
+  return snapshot.docs
+    .map((docSnap) => ({
+      id: docSnap.id,
+      ...(docSnap.data() as Omit<Product, 'id'>)
+    }))
+    .filter(p => p.id !== excludeProductId)
+    .slice(0, 4);
+}
+
+export function useProducts(options: UseProductsOptions = {}) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const { categoryId, featuredOnly } = options;
 
-  // Real-time subscription to products
-  useEffect(() => {
-    let q = query(collection(db, 'products'), orderBy('createdAt', 'desc'));
-    
-    if (categoryId) {
-      q = query(
-        collection(db, 'products'),
-        where('categoryId', '==', categoryId),
-        orderBy('createdAt', 'desc')
-      );
-    }
+  // Build query key based on options
+  const queryKey = ['products', { categoryId, featuredOnly }];
 
-    if (featuredOnly) {
-      q = query(
-        collection(db, 'products'),
-        where('isFeatured', '==', true),
-        orderBy('featuredOrder', 'asc')
-      );
-    }
+  // Use React Query for caching
+  const { data: products = [], isLoading: loading } = useQuery({
+    queryKey,
+    queryFn: () => fetchProducts(options),
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
 
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        const productsData = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data()
-        })) as Product[];
-        setProducts(productsData);
-        setLoading(false);
-      },
-      (error) => {
-        console.error('Error fetching products:', error);
-        setLoading(false);
-        toast({
-          title: 'Error',
-          description: 'Failed to load products',
-          variant: 'destructive'
-        });
-      }
-    );
-
-    return () => unsubscribe();
-  }, [categoryId, featuredOnly, toast]);
+  // Invalidate all product queries
+  const invalidateProducts = () => {
+    queryClient.invalidateQueries({ queryKey: ['products'] });
+    queryClient.invalidateQueries({ queryKey: ['product'] });
+  };
 
   // Create product
   const createProduct = useCallback(async (data: Partial<ProductFormData>) => {
@@ -98,6 +132,8 @@ export function useProducts(options: UseProductsOptions = {}) {
         });
       }
 
+      invalidateProducts();
+
       toast({
         title: 'Product created',
         description: `${data.name} has been added`
@@ -113,7 +149,7 @@ export function useProducts(options: UseProductsOptions = {}) {
       });
       throw error;
     }
-  }, [toast]);
+  }, [toast, queryClient]);
 
   // Update product
   const updateProduct = useCallback(async (productId: string, data: Partial<ProductFormData>) => {
@@ -131,6 +167,7 @@ export function useProducts(options: UseProductsOptions = {}) {
       }
 
       await updateDoc(productRef, updateData);
+      invalidateProducts();
 
       toast({
         title: 'Product updated',
@@ -145,7 +182,7 @@ export function useProducts(options: UseProductsOptions = {}) {
       });
       throw error;
     }
-  }, [toast]);
+  }, [toast, queryClient]);
 
   // Delete product
   const deleteProduct = useCallback(async (productId: string, categoryId?: string) => {
@@ -161,6 +198,8 @@ export function useProducts(options: UseProductsOptions = {}) {
         });
       }
 
+      invalidateProducts();
+
       toast({
         title: 'Product deleted',
         description: 'The product has been removed'
@@ -174,7 +213,7 @@ export function useProducts(options: UseProductsOptions = {}) {
       });
       throw error;
     }
-  }, [toast]);
+  }, [toast, queryClient]);
 
   // Toggle featured status
   const toggleFeatured = useCallback(async (productId: string, currentFeatured: boolean, categoryId?: string) => {
@@ -212,6 +251,8 @@ export function useProducts(options: UseProductsOptions = {}) {
         });
       }
 
+      invalidateProducts();
+
       toast({
         title: currentFeatured ? 'Removed from featured' : 'Added to featured',
         description: currentFeatured 
@@ -227,7 +268,7 @@ export function useProducts(options: UseProductsOptions = {}) {
       });
       throw error;
     }
-  }, [toast]);
+  }, [toast, queryClient]);
 
   // Update featured order
   const updateFeaturedOrder = useCallback(async (productId: string, newOrder: number, categoryId: string) => {
@@ -243,10 +284,10 @@ export function useProducts(options: UseProductsOptions = {}) {
       );
       
       const snapshot = await getDocs(featuredQuery);
-      const featuredProducts = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as Product[];
+      const featuredProducts = snapshot.docs.map(docSnap => ({
+        id: docSnap.id,
+        ...(docSnap.data() as Omit<Product, 'id'>)
+      }));
 
       // Find current product and its old order
       const currentProduct = featuredProducts.find(p => p.id === productId);
@@ -288,6 +329,7 @@ export function useProducts(options: UseProductsOptions = {}) {
       });
 
       await batch.commit();
+      invalidateProducts();
     } catch (error: any) {
       console.error('Error updating featured order:', error);
       toast({
@@ -296,7 +338,7 @@ export function useProducts(options: UseProductsOptions = {}) {
         variant: 'destructive'
       });
     }
-  }, [toast]);
+  }, [toast, queryClient]);
 
   // Get featured products for a category
   const featuredProducts = products.filter(p => p.isFeatured).sort((a, b) => 
@@ -313,4 +355,31 @@ export function useProducts(options: UseProductsOptions = {}) {
     toggleFeatured,
     updateFeaturedOrder
   };
+}
+
+// Hook for fetching a single product by ID
+export function useProduct(productId: string | undefined) {
+  const { data: product, isLoading: loading, error } = useQuery({
+    queryKey: ['product', productId],
+    queryFn: () => productId ? fetchProductById(productId) : null,
+    enabled: !!productId,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+
+  return { product, loading, error };
+}
+
+// Hook for fetching related products
+export function useRelatedProducts(categoryId: string | undefined, excludeProductId: string | undefined) {
+  const { data: relatedProducts = [], isLoading: loading } = useQuery({
+    queryKey: ['relatedProducts', categoryId, excludeProductId],
+    queryFn: () => 
+      categoryId && excludeProductId 
+        ? fetchRelatedProducts(categoryId, excludeProductId) 
+        : [],
+    enabled: !!categoryId && !!excludeProductId,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+
+  return { relatedProducts, loading };
 }

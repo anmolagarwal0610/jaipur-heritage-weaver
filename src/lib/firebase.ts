@@ -16,7 +16,7 @@
 
 import { initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
-import { initializeFirestore } from "firebase/firestore";
+import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 
 // Your web app's Firebase configuration
@@ -32,14 +32,9 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
-// Initialize Firestore with long-polling to avoid WebChannel issues
-export const db = initializeFirestore(
-  app,
-  {
-    experimentalForceLongPolling: true,
-  },
-  "jaipur",
-);
+// Initialize Firestore with named database
+// Using getFirestore with database ID for named database
+export const db = getFirestore(app, "jaipur");
 
 // Initialize other services
 export const auth = getAuth(app);
