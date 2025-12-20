@@ -323,6 +323,9 @@ export default function CategoriesManager() {
                             max={rockstarCategories.length}
                             value={category.rockstarOrder || 1}
                             onChange={(e) => handleRockstarOrderChange(category, parseInt(e.target.value))}
+                            onClick={(e) => e.stopPropagation()}
+                            onFocus={(e) => e.stopPropagation()}
+                            onMouseDown={(e) => e.stopPropagation()}
                             className="w-14 h-8 text-center text-sm"
                           />
                         </div>

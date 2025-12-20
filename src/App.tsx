@@ -6,7 +6,7 @@
  * - Test on mobile viewport before deploying
  */
 
-import { lazy, Suspense } from "react";
+import { Suspense, lazy } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -23,21 +23,21 @@ import Contact from "./pages/Contact";
 import Cart from "./pages/Cart";
 import NotFound from "./pages/NotFound";
 
-// Lazy-load heavier/rarely-visited areas
+// Lazy-load auth/dashboard pages (less frequently visited)
 const Auth = lazy(() => import("./pages/Auth"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
-const Admin = lazy(() => import("./pages/Admin"));
 
-// Admin pages
-const AdminLayout = lazy(() => import("./pages/admin/AdminLayout"));
-const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
-const CategoriesManager = lazy(() => import("./pages/admin/CategoriesManager"));
-const ProductsList = lazy(() => import("./pages/admin/ProductsList"));
-const OrdersList = lazy(() => import("./pages/admin/OrdersList"));
-const OrderDetail = lazy(() => import("./pages/admin/OrderDetail"));
-const CustomersList = lazy(() => import("./pages/admin/CustomersList"));
-const Analytics = lazy(() => import("./pages/admin/Analytics"));
-const SettingsPage = lazy(() => import("./pages/admin/Settings"));
+// Eager-load admin pages to avoid lazy loading spinners inside admin console
+import Admin from "./pages/Admin";
+import AdminLayout from "./pages/admin/AdminLayout";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import CategoriesManager from "./pages/admin/CategoriesManager";
+import ProductsList from "./pages/admin/ProductsList";
+import OrdersList from "./pages/admin/OrdersList";
+import OrderDetail from "./pages/admin/OrderDetail";
+import CustomersList from "./pages/admin/CustomersList";
+import Analytics from "./pages/admin/Analytics";
+import SettingsPage from "./pages/admin/Settings";
 
 // Configure React Query with caching
 const queryClient = new QueryClient({
@@ -77,17 +77,19 @@ const App = () => (
               <Route path="/auth" element={<Auth />} />
               <Route path="/dashboard" element={<Dashboard />} />
               
-              {/* Admin Routes - accessible via /dashboard/admin */}
-              <Route path="/dashboard/admin" element={<Admin />} />
-              <Route element={<AdminLayout />}>
-                <Route path="/dashboard/admin/home" element={<AdminDashboard />} />
-                <Route path="/dashboard/admin/products" element={<CategoriesManager />} />
-                <Route path="/dashboard/admin/products/:categoryId" element={<ProductsList />} />
-                <Route path="/dashboard/admin/orders" element={<OrdersList />} />
-                <Route path="/dashboard/admin/orders/:orderId" element={<OrderDetail />} />
-                <Route path="/dashboard/admin/customers" element={<CustomersList />} />
-                <Route path="/dashboard/admin/analytics" element={<Analytics />} />
-                <Route path="/dashboard/admin/settings" element={<SettingsPage />} />
+              {/* Admin Routes - Admin.tsx wraps ALL admin routes for password protection */}
+              <Route path="/dashboard/admin" element={<Admin />}>
+                <Route element={<AdminLayout />}>
+                  <Route index element={<Navigate to="home" replace />} />
+                  <Route path="home" element={<AdminDashboard />} />
+                  <Route path="products" element={<CategoriesManager />} />
+                  <Route path="products/:categoryId" element={<ProductsList />} />
+                  <Route path="orders" element={<OrdersList />} />
+                  <Route path="orders/:orderId" element={<OrderDetail />} />
+                  <Route path="customers" element={<CustomersList />} />
+                  <Route path="analytics" element={<Analytics />} />
+                  <Route path="settings" element={<SettingsPage />} />
+                </Route>
               </Route>
               
               {/* Admin URL compatibility redirects */}
