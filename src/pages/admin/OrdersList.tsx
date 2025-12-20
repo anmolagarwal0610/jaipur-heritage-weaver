@@ -163,7 +163,7 @@ export default function OrdersList() {
                       <TableRow 
                         key={order.id} 
                         className="cursor-pointer hover:bg-muted/50"
-                        onClick={() => navigate(`/admin/orders/${order.id}`)}
+                        onClick={() => navigate(`/dashboard/admin/orders/${order.id}`)}
                       >
                         <TableCell className="font-medium">
                           #{order.orderNumber || order.id.slice(0, 8).toUpperCase()}
@@ -194,7 +194,7 @@ export default function OrdersList() {
                             size="icon"
                             onClick={(e) => {
                               e.stopPropagation();
-                              navigate(`/admin/orders/${order.id}`);
+                              navigate(`/dashboard/admin/orders/${order.id}`);
                             }}
                           >
                             <Eye className="h-4 w-4" />

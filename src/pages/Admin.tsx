@@ -1,8 +1,8 @@
 /**
  * Admin Console Page
  *
- * TEMPORARY: Admin role check disabled - any logged-in user can access.
- * TODO: Re-enable useAdminRole hook after fixing Firestore issues.
+ * Requires admin role to access. Verifies via useAdminRole hook.
+ * Admin roles are stored in user_roles collection in Firestore.
  */
 
 import { useState, useEffect } from "react";
@@ -10,8 +10,7 @@ import { useNavigate } from "react-router-dom";
 import { doc, getDocFromServer, setDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
-// TEMPORARY: Admin role check disabled
-// import { useAdminRole } from '@/hooks/useAdminRole';
+import { useAdminRole } from '@/hooks/useAdminRole';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,10 +18,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useToast } from "@/hooks/use-toast";
 import { Shield, Lock, Eye, EyeOff, AlertTriangle, Loader2 } from "lucide-react";
 import SEO from "@/components/SEO";
-
-// TEMP BUILD MODE: allow any logged-in user into admin without password/role checks.
-// Set to false once Firestore rules + roles are fixed.
-const TEMP_OPEN_ADMIN_CONSOLE = true;
 
 // Helper function to fetch with retry
 const fetchWithRetry = async <T,>(
@@ -44,28 +39,21 @@ const fetchWithRetry = async <T,>(
 const Admin = () => {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
-  // TEMPORARY: Bypass admin check - any logged-in user is treated as admin
-  const isAdmin = true;
-  const adminLoading = false;
+  const { isAdmin, loading: adminLoading } = useAdminRole();
   const { toast } = useToast();
 
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isVerified, setIsVerified] = useState(TEMP_OPEN_ADMIN_CONSOLE);
-  const [setupRequired, setSetupRequired] = useState<boolean | null>(TEMP_OPEN_ADMIN_CONSOLE ? false : null);
-  const [checkingSetup, setCheckingSetup] = useState(!TEMP_OPEN_ADMIN_CONSOLE);
+  const [isVerified, setIsVerified] = useState(false);
+  const [setupRequired, setSetupRequired] = useState<boolean | null>(null);
+  const [checkingSetup, setCheckingSetup] = useState(true);
 
   // Check if admin console password is set up
   useEffect(() => {
-    // TEMP BUILD MODE: skip Firestore admin_settings checks entirely to prevent lockouts.
-    if (TEMP_OPEN_ADMIN_CONSOLE) {
-      setIsVerified(true);
-      setSetupRequired(false);
-      setCheckingSetup(false);
-      return;
-    }
+    // Wait for admin role check to complete
+    if (adminLoading) return;
 
     const checkAdminSetup = async () => {
       if (!user || !isAdmin) return;
@@ -103,7 +91,7 @@ const Admin = () => {
   // Redirect if not authenticated
   useEffect(() => {
     if (!authLoading && !user) {
-      navigate("/auth", { state: { from: "/admin" } });
+      navigate("/auth", { state: { from: "/dashboard/admin" } });
     }
   }, [user, authLoading, navigate]);
 
@@ -252,7 +240,7 @@ const Admin = () => {
 
   // Admin console (after verification) - redirect to dashboard
   if (isVerified) {
-    navigate('/admin/dashboard');
+    navigate('/dashboard/admin/home');
     return null;
   }
 

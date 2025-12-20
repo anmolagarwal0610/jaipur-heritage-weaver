@@ -1,7 +1,8 @@
-import { useState, useContext } from 'react';
+import { useState } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
+import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
@@ -15,25 +16,37 @@ import {
   LogOut,
   Home,
   Menu,
-  X
+  X,
+  LayoutDashboard
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-import { LayoutDashboard } from 'lucide-react';
-
 const navItems = [
-  { to: '/admin/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/admin/products', icon: Package, label: 'Products' },
-  { to: '/admin/orders', icon: ShoppingCart, label: 'Orders' },
-  { to: '/admin/customers', icon: Users, label: 'Customers' },
-  { to: '/admin/analytics', icon: BarChart3, label: 'Analytics' },
-  { to: '/admin/settings', icon: Settings, label: 'Settings' },
+  { to: '/dashboard/admin/home', icon: LayoutDashboard, label: 'Dashboard' },
+  { to: '/dashboard/admin/products', icon: Package, label: 'Products' },
+  { to: '/dashboard/admin/orders', icon: ShoppingCart, label: 'Orders' },
+  { to: '/dashboard/admin/customers', icon: Users, label: 'Customers' },
+  { to: '/dashboard/admin/analytics', icon: BarChart3, label: 'Analytics' },
+  { to: '/dashboard/admin/settings', icon: Settings, label: 'Settings' },
 ];
 
 export default function AdminLayout() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const navigate = useNavigate();
+  const { user, userProfile } = useAuth();
+
+  // Get user initials from display name or email
+  const getInitials = () => {
+    const name = userProfile?.displayName || user?.displayName;
+    if (name) {
+      return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+    }
+    if (user?.email) {
+      return user.email[0].toUpperCase();
+    }
+    return 'AD';
+  };
 
   const handleLogout = async () => {
     await signOut(auth);
@@ -47,7 +60,7 @@ export default function AdminLayout() {
         {!collapsed && (
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-              <span className="text-primary-foreground font-serif font-bold text-sm">JT</span>
+              <span className="text-primary-foreground font-serif font-bold text-sm">{getInitials()}</span>
             </div>
             <span className="font-serif font-semibold text-sidebar-foreground">Admin</span>
           </div>

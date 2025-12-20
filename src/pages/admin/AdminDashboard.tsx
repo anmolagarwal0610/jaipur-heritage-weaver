@@ -51,31 +51,31 @@ export default function AdminDashboard() {
       title: 'Products', 
       description: 'Manage categories and products',
       icon: Package,
-      to: '/admin/products'
+      to: '/dashboard/admin/products'
     },
     { 
       title: 'Orders', 
       description: 'View and manage orders',
       icon: ShoppingCart,
-      to: '/admin/orders'
+      to: '/dashboard/admin/orders'
     },
     { 
       title: 'Customers', 
       description: 'View customer information',
       icon: Users,
-      to: '/admin/customers'
+      to: '/dashboard/admin/customers'
     },
     { 
       title: 'Analytics', 
       description: 'Store performance metrics',
       icon: BarChart3,
-      to: '/admin/analytics'
+      to: '/dashboard/admin/analytics'
     },
     { 
       title: 'Settings', 
       description: 'Store configuration',
       icon: Settings,
-      to: '/admin/settings'
+      to: '/dashboard/admin/settings'
     },
   ];
 
