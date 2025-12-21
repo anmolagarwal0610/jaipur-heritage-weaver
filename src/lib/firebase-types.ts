@@ -75,6 +75,9 @@ export interface SubCategory {
   categoryId: string;
   categoryName: string;
   
+  // Display settings
+  showBadgeOnProducts: boolean; // Controls if badge shows in shop
+  
   // Metadata
   order: number;
   productCount: number;

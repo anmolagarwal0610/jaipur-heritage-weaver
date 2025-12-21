@@ -132,6 +132,15 @@ export function useProducts(options: UseProductsOptions = {}) {
         });
       }
 
+      // Update subcategory product count
+      if (data.subCategoryId) {
+        const subCategoryRef = doc(db, 'subcategories', data.subCategoryId);
+        await updateDoc(subCategoryRef, {
+          productCount: increment(1),
+          updatedAt: serverTimestamp()
+        });
+      }
+
       invalidateProducts();
 
       toast({
@@ -185,7 +194,7 @@ export function useProducts(options: UseProductsOptions = {}) {
   }, [toast, queryClient]);
 
   // Delete product
-  const deleteProduct = useCallback(async (productId: string, categoryId?: string) => {
+  const deleteProduct = useCallback(async (productId: string, categoryId?: string, subCategoryId?: string) => {
     try {
       await deleteDoc(doc(db, 'products', productId));
 
@@ -193,6 +202,15 @@ export function useProducts(options: UseProductsOptions = {}) {
       if (categoryId) {
         const categoryRef = doc(db, 'categories', categoryId);
         await updateDoc(categoryRef, {
+          productCount: increment(-1),
+          updatedAt: serverTimestamp()
+        });
+      }
+
+      // Update subcategory product count
+      if (subCategoryId) {
+        const subCategoryRef = doc(db, 'subcategories', subCategoryId);
+        await updateDoc(subCategoryRef, {
           productCount: increment(-1),
           updatedAt: serverTimestamp()
         });

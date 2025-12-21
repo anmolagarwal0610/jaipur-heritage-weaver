@@ -34,11 +34,14 @@ const Shop = () => {
   const { products, loading: productsLoading } = useProducts();
   const { subCategories, loading: subCategoriesLoading } = useSubCategories();
 
-  // Create a map of subcategory IDs to names for quick lookup
+  // Create a map of subcategory IDs to info for quick lookup
   const subCategoryMap = useMemo(() => {
-    const map: Record<string, string> = {};
+    const map: Record<string, { name: string; showBadge: boolean }> = {};
     subCategories.forEach(sc => {
-      map[sc.id] = sc.name;
+      map[sc.id] = { 
+        name: sc.name, 
+        showBadge: sc.showBadgeOnProducts !== false 
+      };
     });
     return map;
   }, [subCategories]);
@@ -287,13 +290,14 @@ const Shop = () => {
                         </Button>
                       </div>
                     </div>
-                    {/* Subcategory Badge */}
-                    {product.subCategoryId && subCategoryMap[product.subCategoryId] && (
+                    {/* Subcategory Badge - only show if showBadgeOnProducts is true */}
+                    {product.subCategoryId && 
+                     subCategoryMap[product.subCategoryId]?.showBadge && (
                       <Badge 
                         variant="secondary" 
                         className="mb-1.5 text-[10px] md:text-xs font-normal bg-secondary/80 text-muted-foreground hover:bg-secondary"
                       >
-                        {subCategoryMap[product.subCategoryId]}
+                        {subCategoryMap[product.subCategoryId].name}
                       </Badge>
                     )}
                     <h3 className="font-serif text-xs sm:text-sm md:text-base text-foreground group-hover:text-gold transition-colors line-clamp-2">
