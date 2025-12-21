@@ -240,6 +240,7 @@ export default function CategoriesManager() {
                 <TableHead className="w-16">Image</TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead className="hidden md:table-cell">Description</TableHead>
+                <TableHead className="text-center">Sub-Categories</TableHead>
                 <TableHead className="text-center">Products</TableHead>
                 <TableHead className="text-center">Featured Limit</TableHead>
                 <TableHead className="text-center">Rockstar</TableHead>
@@ -250,7 +251,7 @@ export default function CategoriesManager() {
             <TableBody>
               {categories.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
+                  <TableCell colSpan={9} className="text-center py-12 text-muted-foreground">
                     <FolderOpen className="h-12 w-12 mx-auto mb-3 opacity-50" />
                     <p>No categories yet</p>
                     <Button variant="link" onClick={openAddDialog} className="mt-2">
@@ -263,7 +264,7 @@ export default function CategoriesManager() {
                   <TableRow 
                     key={category.id} 
                     className="cursor-pointer hover:bg-muted/50"
-                    onClick={() => navigate(`/dashboard/admin/products/${category.id}`)}
+                    onClick={() => navigate(`/dashboard/admin/categories/${category.id}/subcategories`)}
                   >
                     <TableCell>
                       <div className="w-12 h-12 rounded-md overflow-hidden bg-muted">
@@ -297,10 +298,15 @@ export default function CategoriesManager() {
                         className="cursor-pointer hover:bg-primary hover:text-primary-foreground"
                         onClick={(e) => {
                           e.stopPropagation();
-                          navigate(`/dashboard/admin/products/${category.id}`);
+                          navigate(`/dashboard/admin/categories/${category.id}/subcategories`);
                         }}
                       >
-                        {category.productCount} <ChevronRight className="h-3 w-3 ml-1 inline" />
+                        {category.subCategoryCount || 0} subs <ChevronRight className="h-3 w-3 ml-1 inline" />
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <Badge variant="secondary">
+                        {category.productCount} products
                       </Badge>
                     </TableCell>
                     <TableCell className="text-center">

@@ -46,6 +46,10 @@ const ProductDetail = () => {
 
   const handleAddToCart = () => {
     if (product) {
+      // Check stock before adding
+      if (quantity > product.stockQuantity) {
+        return;
+      }
       addToCart({
         productId: product.id,
         name: product.name,
@@ -53,6 +57,7 @@ const ProductDetail = () => {
         image: product.primaryImageUrl,
         size: selectedSize || product.size || null,
         quantity,
+        stockQuantity: product.stockQuantity,
       });
     }
   };
@@ -287,11 +292,14 @@ const ProductDetail = () => {
                   size="icon"
                   className="h-10 w-10"
                   onClick={() => setQuantity(quantity + 1)}
-                  disabled={!product.inStock}
+                  disabled={!product.inStock || quantity >= product.stockQuantity}
                 >
                   <Plus className="h-4 w-4" />
                 </Button>
               </div>
+              {product.stockQuantity <= 5 && product.stockQuantity > 0 && (
+                <p className="text-xs text-terracotta mt-1">Only {product.stockQuantity} left in stock</p>
+              )}
             </div>
 
             {/* Action Buttons */}

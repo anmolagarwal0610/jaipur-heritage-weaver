@@ -13,6 +13,7 @@ export interface CartItem {
   image: string;
   size: string | null;
   quantity: number;
+  stockQuantity: number; // Track available stock for validation
 }
 
 interface CartState {
@@ -76,13 +77,29 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       );
 
       if (existingIndex >= 0) {
+        const existingItem = prevItems[existingIndex];
+        const newQuantity = existingItem.quantity + item.quantity;
+        
+        // Check stock limit
+        if (newQuantity > item.stockQuantity) {
+          toast.error(`Only ${item.stockQuantity} available in stock`);
+          return prevItems;
+        }
+        
         const updated = [...prevItems];
         updated[existingIndex] = {
           ...updated[existingIndex],
-          quantity: updated[existingIndex].quantity + item.quantity,
+          quantity: newQuantity,
+          stockQuantity: item.stockQuantity, // Update stock info
         };
         toast.success('Updated cart quantity');
         return updated;
+      }
+
+      // Check stock limit for new item
+      if (item.quantity > item.stockQuantity) {
+        toast.error(`Only ${item.stockQuantity} available in stock`);
+        return prevItems;
       }
 
       toast.success('Added to cart');
@@ -106,6 +123,11 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     setItems(prevItems => {
       return prevItems.map(item => {
         if (item.productId === productId && item.size === size) {
+          // Check stock limit
+          if (quantity > item.stockQuantity) {
+            toast.error(`Only ${item.stockQuantity} available in stock`);
+            return item;
+          }
           return { ...item, quantity };
         }
         return item;

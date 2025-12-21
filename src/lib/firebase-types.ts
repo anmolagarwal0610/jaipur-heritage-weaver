@@ -57,6 +57,27 @@ export interface Category {
   // Metadata
   order: number; // Display order in category list
   productCount: number;
+  subCategoryCount: number;
+  isActive: boolean;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
+// Sub-category within a category
+export interface SubCategory {
+  id: string;
+  name: string;
+  slug: string;
+  description: string;
+  imageUrl: string | null;
+  
+  // Parent category reference
+  categoryId: string;
+  categoryName: string;
+  
+  // Metadata
+  order: number;
+  productCount: number;
   isActive: boolean;
   createdAt: Timestamp;
   updatedAt: Timestamp;
@@ -76,6 +97,10 @@ export interface Product {
   // Category
   categoryId: string;
   categoryName: string; // Denormalized for display
+  
+  // Sub-category
+  subCategoryId: string | null;
+  subCategoryName: string | null;
   
   // Images
   images: ProductImage[];
@@ -203,6 +228,7 @@ export interface StoreSettings {
 }
 
 // Form types for creating/editing (without Firestore-specific fields)
-export type CategoryFormData = Omit<Category, 'id' | 'createdAt' | 'updatedAt' | 'productCount'>;
+export type CategoryFormData = Omit<Category, 'id' | 'createdAt' | 'updatedAt' | 'productCount' | 'subCategoryCount'>;
+export type SubCategoryFormData = Omit<SubCategory, 'id' | 'createdAt' | 'updatedAt' | 'productCount'>;
 export type ProductFormData = Omit<Product, 'id' | 'createdAt' | 'updatedAt'>;
 export type OrderFormData = Omit<Order, 'id' | 'createdAt' | 'updatedAt' | 'orderNumber'>;

@@ -34,6 +34,8 @@ interface ProductFormProps {
   product: Product | null;
   categoryId: string;
   categoryName: string;
+  subCategoryId: string;
+  subCategoryName: string;
 }
 
 const BADGE_OPTIONS = [
@@ -109,7 +111,9 @@ export default function ProductForm({
   onOpenChange,
   product,
   categoryId,
-  categoryName
+  categoryName,
+  subCategoryId,
+  subCategoryName
 }: ProductFormProps) {
   const { createProduct, updateProduct } = useProducts();
   const [saving, setSaving] = useState(false);
@@ -158,6 +162,8 @@ export default function ProductForm({
         ...formData,
         categoryId,
         categoryName,
+        subCategoryId,
+        subCategoryName,
         primaryImageUrl: formData.images[0]?.url || ''
       };
 

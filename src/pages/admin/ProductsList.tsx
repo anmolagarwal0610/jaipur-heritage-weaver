@@ -41,10 +41,11 @@ import {
 import { cn } from '@/lib/utils';
 
 export default function ProductsList() {
-  const { categoryId } = useParams<{ categoryId: string }>();
+  const { categoryId, subCategoryId } = useParams<{ categoryId: string; subCategoryId: string }>();
   const navigate = useNavigate();
   
   const [category, setCategory] = useState<Category | null>(null);
+  const [subCategory, setSubCategory] = useState<{ id: string; name: string } | null>(null);
   const [categoryLoading, setCategoryLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -52,7 +53,7 @@ export default function ProductsList() {
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
 
   const {
-    products,
+    products: allProducts,
     featuredProducts,
     loading: productsLoading,
     deleteProduct,
@@ -60,9 +61,14 @@ export default function ProductsList() {
     updateFeaturedOrder
   } = useProducts({ categoryId });
 
-  // Fetch category details
+  // Filter products by subcategory
+  const products = subCategoryId 
+    ? allProducts.filter(p => p.subCategoryId === subCategoryId)
+    : allProducts;
+
+  // Fetch category and subcategory details
   useEffect(() => {
-    const fetchCategory = async () => {
+    const fetchData = async () => {
       if (!categoryId) return;
       
       try {
@@ -72,15 +78,25 @@ export default function ProductsList() {
         if (categorySnap.exists()) {
           setCategory({ id: categorySnap.id, ...categorySnap.data() } as Category);
         }
+
+        if (subCategoryId) {
+          const subCategoryRef = doc(db, 'subcategories', subCategoryId);
+          const subCategorySnap = await getDoc(subCategoryRef);
+          
+          if (subCategorySnap.exists()) {
+            const data = subCategorySnap.data();
+            setSubCategory({ id: subCategorySnap.id, name: data.name });
+          }
+        }
       } catch (error) {
-        console.error('Error fetching category:', error);
+        console.error('Error fetching data:', error);
       } finally {
         setCategoryLoading(false);
       }
     };
 
-    fetchCategory();
-  }, [categoryId]);
+    fetchData();
+  }, [categoryId, subCategoryId]);
 
   const openAddDialog = () => {
     setEditingProduct(null);
@@ -130,11 +146,11 @@ export default function ProductsList() {
     );
   }
 
-  if (!category) {
+  if (!category || !subCategory) {
     return (
       <div className="text-center py-12">
-        <p className="text-muted-foreground">Category not found</p>
-        <Button variant="link" onClick={() => navigate('/admin/products')}>
+        <p className="text-muted-foreground">Category or Sub-category not found</p>
+        <Button variant="link" onClick={() => navigate('/dashboard/admin/products')}>
           Go back to categories
         </Button>
       </div>
@@ -149,16 +165,16 @@ export default function ProductsList() {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => navigate('/admin/products')}
+            onClick={() => navigate(`/dashboard/admin/categories/${categoryId}/subcategories`)}
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
             <h1 className="text-2xl font-serif font-semibold text-foreground">
-              {category.name}
+              {subCategory.name}
             </h1>
             <p className="text-muted-foreground text-sm mt-1">
-              {products.length} products • {featuredProducts.length}/{category.featuredProductLimit} featured
+              {category.name} • {products.length} products • {featuredProducts.filter(p => p.subCategoryId === subCategoryId).length}/{category.featuredProductLimit} featured
             </p>
           </div>
         </div>
@@ -339,6 +355,8 @@ export default function ProductsList() {
         product={editingProduct}
         categoryId={categoryId!}
         categoryName={category.name}
+        subCategoryId={subCategoryId!}
+        subCategoryName={subCategory.name}
       />
 
       {/* Delete Confirmation Dialog */}
