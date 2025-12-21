@@ -20,21 +20,28 @@ const COLLECTION_NAME = 'subcategories';
 
 // Fetch subcategories from Firestore
 async function fetchSubCategories(categoryId?: string): Promise<SubCategory[]> {
-  let q;
-  if (categoryId) {
-    q = query(
-      collection(db, COLLECTION_NAME), 
-      where('categoryId', '==', categoryId),
-      orderBy('order', 'asc')
-    );
-  } else {
-    q = query(collection(db, COLLECTION_NAME), orderBy('order', 'asc'));
+  try {
+    let q;
+    if (categoryId) {
+      // Simple query without orderBy to avoid composite index requirement
+      q = query(
+        collection(db, COLLECTION_NAME), 
+        where('categoryId', '==', categoryId)
+      );
+    } else {
+      q = query(collection(db, COLLECTION_NAME));
+    }
+    const snapshot = await getDocs(q);
+    const subcategories = snapshot.docs.map((docSnap) => ({
+      id: docSnap.id,
+      ...(docSnap.data() as Omit<SubCategory, 'id'>)
+    }));
+    // Sort client-side to avoid index requirement
+    return subcategories.sort((a, b) => (a.order || 0) - (b.order || 0));
+  } catch (error) {
+    console.error('Error fetching subcategories:', error);
+    throw error;
   }
-  const snapshot = await getDocs(q);
-  return snapshot.docs.map((docSnap) => ({
-    id: docSnap.id,
-    ...(docSnap.data() as Omit<SubCategory, 'id'>)
-  }));
 }
 
 export function useSubCategories(categoryId?: string) {

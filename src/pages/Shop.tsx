@@ -12,6 +12,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
 import SEO from "@/components/SEO";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ShoppingBag, Heart, Filter, X } from "lucide-react";
@@ -19,6 +20,7 @@ import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/co
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCategories } from "@/hooks/useCategories";
 import { useProducts } from "@/hooks/useProducts";
+import { useSubCategories } from "@/hooks/useSubCategories";
 
 const Shop = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -30,6 +32,16 @@ const Shop = () => {
 
   const { categories, loading: categoriesLoading } = useCategories();
   const { products, loading: productsLoading } = useProducts();
+  const { subCategories, loading: subCategoriesLoading } = useSubCategories();
+
+  // Create a map of subcategory IDs to names for quick lookup
+  const subCategoryMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    subCategories.forEach(sc => {
+      map[sc.id] = sc.name;
+    });
+    return map;
+  }, [subCategories]);
 
   // Update URL when category changes
   useEffect(() => {
@@ -83,7 +95,7 @@ const Shop = () => {
     setMobileFiltersOpen(false);
   };
 
-  const loading = categoriesLoading || productsLoading;
+  const loading = categoriesLoading || productsLoading || subCategoriesLoading;
 
   const FilterSidebar = () => (
     <div className="space-y-6">
@@ -275,6 +287,15 @@ const Shop = () => {
                         </Button>
                       </div>
                     </div>
+                    {/* Subcategory Badge */}
+                    {product.subCategoryId && subCategoryMap[product.subCategoryId] && (
+                      <Badge 
+                        variant="secondary" 
+                        className="mb-1.5 text-[10px] md:text-xs font-normal bg-secondary/80 text-muted-foreground hover:bg-secondary"
+                      >
+                        {subCategoryMap[product.subCategoryId]}
+                      </Badge>
+                    )}
                     <h3 className="font-serif text-xs sm:text-sm md:text-base text-foreground group-hover:text-gold transition-colors line-clamp-2">
                       {product.name}
                     </h3>
