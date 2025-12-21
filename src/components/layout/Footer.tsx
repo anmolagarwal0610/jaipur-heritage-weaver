@@ -12,15 +12,10 @@ import Logo from "@/components/Logo";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
+import { useCategories } from "@/hooks/useCategories";
+
 const Footer = () => {
-  const categories = [
-    "Handblock Bedsheets",
-    "Jaipuri Bedsheets",
-    "Quilts",
-    "Dohar",
-    "Bedcovers",
-    "Curtains",
-  ];
+  const { rockstarCategories, loading: categoriesLoading } = useCategories();
 
   const quickLinks = [
     { name: "Shop All", href: "/shop" },
@@ -92,16 +87,22 @@ const Footer = () => {
           <div>
             <h4 className="font-serif text-base md:text-lg mb-3 md:mb-4">Categories</h4>
             <ul className="space-y-1.5 md:space-y-2">
-              {categories.map((category) => (
-                <li key={category}>
-                  <Link
-                    to={`/shop?category=${category.toLowerCase().replace(/ /g, "-")}`}
-                    className="text-primary-foreground/70 hover:text-gold text-xs md:text-sm transition-colors inline-block py-0.5"
-                  >
-                    {category}
-                  </Link>
-                </li>
-              ))}
+              {categoriesLoading ? (
+                <li className="text-primary-foreground/70 text-xs md:text-sm">Loading...</li>
+              ) : rockstarCategories.length === 0 ? (
+                <li className="text-primary-foreground/70 text-xs md:text-sm">No categories</li>
+              ) : (
+                rockstarCategories.map((category) => (
+                  <li key={category.id}>
+                    <Link
+                      to={`/shop?category=${category.slug}`}
+                      className="text-primary-foreground/70 hover:text-gold text-xs md:text-sm transition-colors inline-block py-0.5"
+                    >
+                      {category.name}
+                    </Link>
+                  </li>
+                ))
+              )}
             </ul>
           </div>
 

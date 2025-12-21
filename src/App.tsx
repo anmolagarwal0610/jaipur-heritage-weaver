@@ -35,6 +35,7 @@ import Admin from "./pages/Admin";
 import AdminLayout from "./pages/admin/AdminLayout";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import CategoriesManager from "./pages/admin/CategoriesManager";
+import SubCategoriesManager from "./pages/admin/SubCategoriesManager";
 import ProductsList from "./pages/admin/ProductsList";
 import OrdersList from "./pages/admin/OrdersList";
 import OrderDetail from "./pages/admin/OrderDetail";
@@ -89,7 +90,8 @@ const App = () => (
                     <Route index element={<Navigate to="home" replace />} />
                     <Route path="home" element={<AdminDashboard />} />
                     <Route path="products" element={<CategoriesManager />} />
-                    <Route path="products/:categoryId" element={<ProductsList />} />
+                    <Route path="categories/:categoryId/subcategories" element={<SubCategoriesManager />} />
+                    <Route path="categories/:categoryId/subcategories/:subCategoryId/products" element={<ProductsList />} />
                     <Route path="orders" element={<OrdersList />} />
                     <Route path="orders/:orderId" element={<OrderDetail />} />
                     <Route path="customers" element={<CustomersList />} />

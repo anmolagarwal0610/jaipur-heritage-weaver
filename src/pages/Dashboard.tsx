@@ -57,7 +57,10 @@ const Dashboard = () => {
   // Fetch user orders
   useEffect(() => {
     const fetchOrders = async () => {
-      if (!user) return;
+      if (!user) {
+        setOrdersLoading(false);
+        return;
+      }
       
       try {
         const ordersRef = collection(db, 'orders');
@@ -72,8 +75,33 @@ const Dashboard = () => {
           ...doc.data()
         })) as Order[];
         setOrders(ordersData);
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error fetching orders:', error);
+        // If index doesn't exist, try without ordering
+        if (error.code === 'failed-precondition' || error.message?.includes('index')) {
+          console.log('Composite index required. Trying without order...');
+          try {
+            const ordersRef = collection(db, 'orders');
+            const q = query(
+              ordersRef,
+              where('userId', '==', user.uid)
+            );
+            const querySnapshot = await getDocs(q);
+            const ordersData = querySnapshot.docs.map(doc => ({
+              id: doc.id,
+              ...doc.data()
+            })) as Order[];
+            // Sort client-side
+            ordersData.sort((a, b) => {
+              const aTime = a.createdAt?.toMillis?.() || 0;
+              const bTime = b.createdAt?.toMillis?.() || 0;
+              return bTime - aTime;
+            });
+            setOrders(ordersData);
+          } catch (fallbackError) {
+            console.error('Fallback query also failed:', fallbackError);
+          }
+        }
       } finally {
         setOrdersLoading(false);
       }

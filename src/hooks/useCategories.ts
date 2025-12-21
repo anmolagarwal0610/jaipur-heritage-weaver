@@ -78,6 +78,7 @@ export function useCategories() {
         featuredProductLimit: data.featuredProductLimit || 4,
         order,
         productCount: 0,
+        subCategoryCount: 0,
         isActive: data.isActive !== false,
         createdAt: Timestamp.now(),
         updatedAt: Timestamp.now()
