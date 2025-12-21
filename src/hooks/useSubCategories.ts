@@ -73,7 +73,16 @@ export function useSubCategories(categoryId?: string) {
   const createSubCategory = useCallback(async (data: Partial<SubCategoryFormData>) => {
     try {
       const slug = data.slug || generateSlug(data.name || '');
-      const existingCount = subCategories.filter(sc => sc.categoryId === data.categoryId).length;
+      
+      // Query current count BEFORE adding new document
+      let currentCount = 0;
+      if (data.categoryId) {
+        const currentCountSnapshot = await getDocs(query(
+          collection(db, COLLECTION_NAME),
+          where('categoryId', '==', data.categoryId)
+        ));
+        currentCount = currentCountSnapshot.size;
+      }
       
       const subCategoryData: Omit<SubCategory, 'id'> = {
         name: data.name || '',
@@ -82,7 +91,8 @@ export function useSubCategories(categoryId?: string) {
         imageUrl: data.imageUrl || null,
         categoryId: data.categoryId || '',
         categoryName: data.categoryName || '',
-        order: existingCount + 1,
+        showBadgeOnProducts: data.showBadgeOnProducts !== false,
+        order: currentCount + 1,
         productCount: 0,
         isActive: data.isActive !== false,
         createdAt: Timestamp.now(),
@@ -91,15 +101,11 @@ export function useSubCategories(categoryId?: string) {
 
       await addDoc(collection(db, COLLECTION_NAME), subCategoryData);
 
-      // Update parent category subCategoryCount
+      // Update parent category subCategoryCount with correct value
       if (data.categoryId) {
         const categoryRef = doc(db, 'categories', data.categoryId);
-        const currentCategory = await getDocs(query(
-          collection(db, COLLECTION_NAME),
-          where('categoryId', '==', data.categoryId)
-        ));
         await updateDoc(categoryRef, {
-          subCategoryCount: currentCategory.size + 1,
+          subCategoryCount: currentCount + 1,
           updatedAt: Timestamp.now()
         });
       }
@@ -175,17 +181,23 @@ export function useSubCategories(categoryId?: string) {
         return false;
       }
 
-      await deleteDoc(doc(db, COLLECTION_NAME, id));
-
-      // Update parent category subCategoryCount
+      // Get current count BEFORE deleting
+      let currentCount = 0;
       if (categoryId) {
-        const categoryRef = doc(db, 'categories', categoryId);
-        const currentSubCats = await getDocs(query(
+        const currentCountSnapshot = await getDocs(query(
           collection(db, COLLECTION_NAME),
           where('categoryId', '==', categoryId)
         ));
+        currentCount = currentCountSnapshot.size;
+      }
+
+      await deleteDoc(doc(db, COLLECTION_NAME, id));
+
+      // Update parent category subCategoryCount with correct value
+      if (categoryId) {
+        const categoryRef = doc(db, 'categories', categoryId);
         await updateDoc(categoryRef, {
-          subCategoryCount: Math.max(0, currentSubCats.size - 1),
+          subCategoryCount: Math.max(0, currentCount - 1),
           updatedAt: Timestamp.now()
         });
       }

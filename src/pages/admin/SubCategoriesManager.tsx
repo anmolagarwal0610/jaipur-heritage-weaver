@@ -74,7 +74,8 @@ export default function SubCategoriesManager() {
     name: '',
     description: '',
     imageUrl: '',
-    isActive: true
+    isActive: true,
+    showBadgeOnProducts: true
   });
 
   // Fetch category details
@@ -104,7 +105,8 @@ export default function SubCategoriesManager() {
       name: '',
       description: '',
       imageUrl: '',
-      isActive: true
+      isActive: true,
+      showBadgeOnProducts: true
     });
     setEditingSubCategory(null);
   };
@@ -120,7 +122,8 @@ export default function SubCategoriesManager() {
       name: subCategory.name,
       description: subCategory.description,
       imageUrl: subCategory.imageUrl || '',
-      isActive: subCategory.isActive
+      isActive: subCategory.isActive,
+      showBadgeOnProducts: subCategory.showBadgeOnProducts !== false
     });
     setDialogOpen(true);
   };
@@ -368,6 +371,20 @@ export default function SubCategoriesManager() {
               <Switch
                 checked={formData.isActive}
                 onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked })}
+              />
+            </div>
+
+            {/* Show Badge on Products */}
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label>Show Badge on Products</Label>
+                <p className="text-sm text-muted-foreground">
+                  Display this sub-category as a badge on product cards in the shop
+                </p>
+              </div>
+              <Switch
+                checked={formData.showBadgeOnProducts}
+                onCheckedChange={(checked) => setFormData({ ...formData, showBadgeOnProducts: checked })}
               />
             </div>
           </div>
