@@ -24,8 +24,15 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCart } from "@/contexts/CartContext";
+import ShopMegaMenu from "./ShopMegaMenu";
 
 const navigation = [
+  { name: "Home", href: "/" },
+  { name: "Our Story", href: "/our-story" },
+  { name: "Contact", href: "/contact" },
+];
+
+const mobileNavigation = [
   { name: "Home", href: "/" },
   { name: "Shop", href: "/shop" },
   { name: "Our Story", href: "/our-story" },
@@ -85,7 +92,7 @@ const Header = () => {
                 <SheetContent side="left" className="w-[280px] sm:w-80">
                   <div className="flex flex-col gap-6 mt-8">
                     <Logo className="mb-4" />
-                    {navigation.map((item) => (
+                    {mobileNavigation.map((item) => (
                       <Link
                         key={item.name}
                         to={item.href}
@@ -167,7 +174,26 @@ const Header = () => {
 
             {/* Center: Desktop Navigation */}
             <div className="hidden md:flex items-center gap-6 lg:gap-8">
-              {navigation.map((item) => (
+              <Link
+                to="/"
+                className={cn(
+                  "text-sm font-medium transition-colors hover:text-gold relative group min-h-[44px] flex items-center",
+                  location.pathname === "/"
+                    ? "text-gold"
+                    : "text-foreground"
+                )}
+              >
+                Home
+                <span className={cn(
+                  "absolute -bottom-1 left-0 w-full h-0.5 bg-gold transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left",
+                  location.pathname === "/" && "scale-x-100"
+                )} />
+              </Link>
+
+              {/* Shop Mega Menu */}
+              <ShopMegaMenu />
+
+              {navigation.slice(1).map((item) => (
                 <Link
                   key={item.name}
                   to={item.href}

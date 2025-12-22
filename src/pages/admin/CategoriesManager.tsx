@@ -45,7 +45,8 @@ import {
   Loader2,
   FolderOpen,
   Image as ImageIcon,
-  ChevronRight
+  ChevronRight,
+  Menu
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -76,6 +77,7 @@ export default function CategoriesManager() {
     imageUrl: '',
     isRockstar: false,
     rockstarImageUrl: '',
+    visibleOnTaskbar: true,
     featuredProductLimit: 4,
     isActive: true
   });
@@ -87,6 +89,7 @@ export default function CategoriesManager() {
       imageUrl: '',
       isRockstar: false,
       rockstarImageUrl: '',
+      visibleOnTaskbar: true,
       featuredProductLimit: 4,
       isActive: true
     });
@@ -106,6 +109,7 @@ export default function CategoriesManager() {
       imageUrl: category.imageUrl,
       isRockstar: category.isRockstar,
       rockstarImageUrl: category.rockstarImageUrl || '',
+      visibleOnTaskbar: category.visibleOnTaskbar !== false,
       featuredProductLimit: category.featuredProductLimit,
       isActive: category.isActive
     });
@@ -483,6 +487,23 @@ export default function CategoriesManager() {
                   featuredProductLimit: parseInt(e.target.value) || 4 
                 })}
                 className="w-24"
+              />
+            </div>
+
+            {/* Visible on Taskbar */}
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label className="flex items-center gap-2">
+                  <Menu className="h-4 w-4 text-primary" />
+                  Visible on Taskbar
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  Show this category in the Shop dropdown menu in header
+                </p>
+              </div>
+              <Switch
+                checked={formData.visibleOnTaskbar}
+                onCheckedChange={(checked) => setFormData({ ...formData, visibleOnTaskbar: checked })}
               />
             </div>
 

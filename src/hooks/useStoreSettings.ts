@@ -18,6 +18,8 @@ const defaultSettings = {
   defaultShippingCost: 99,
   maxRockstarCategories: 6,
   maxFeaturedProducts: 4,
+  whatsappEnabled: true,
+  whatsappNumber: '919887238849',
 };
 
 export function useStoreSettings() {

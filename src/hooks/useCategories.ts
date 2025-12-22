@@ -75,6 +75,7 @@ export function useCategories() {
         isRockstar: data.isRockstar || false,
         rockstarOrder: data.isRockstar ? (rockstarCategories.length + 1) : null,
         rockstarImageUrl: data.rockstarImageUrl || null,
+        visibleOnTaskbar: data.visibleOnTaskbar !== false,
         featuredProductLimit: data.featuredProductLimit || 4,
         order,
         productCount: 0,
