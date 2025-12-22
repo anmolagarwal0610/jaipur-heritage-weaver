@@ -13,8 +13,8 @@ import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
 import SEO from "@/components/SEO";
-import artisanAnimated from "@/assets/artisan_animated.png";
-import artisan2 from "@/assets/artisan_2.jpg";
+import artisanAnimated from "@/assets/artisan_animated.webp";
+import artisan2 from "@/assets/artisan_2.webp";
 
 const OurStory = () => {
   // Scroll to top on mount
