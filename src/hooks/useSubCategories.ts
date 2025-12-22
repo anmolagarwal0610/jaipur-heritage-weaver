@@ -92,6 +92,7 @@ export function useSubCategories(categoryId?: string) {
         categoryId: data.categoryId || '',
         categoryName: data.categoryName || '',
         showBadgeOnProducts: data.showBadgeOnProducts !== false,
+        visibleOnTaskbar: data.visibleOnTaskbar !== false,
         order: currentCount + 1,
         productCount: 0,
         isActive: data.isActive !== false,

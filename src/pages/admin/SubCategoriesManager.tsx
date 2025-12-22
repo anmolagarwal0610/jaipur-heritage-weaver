@@ -46,7 +46,8 @@ import {
   ArrowLeft,
   FolderOpen,
   Image as ImageIcon,
-  ChevronRight
+  ChevronRight,
+  Menu
 } from 'lucide-react';
 
 export default function SubCategoriesManager() {
@@ -75,7 +76,8 @@ export default function SubCategoriesManager() {
     description: '',
     imageUrl: '',
     isActive: true,
-    showBadgeOnProducts: true
+    showBadgeOnProducts: true,
+    visibleOnTaskbar: true
   });
 
   // Fetch category details
@@ -106,7 +108,8 @@ export default function SubCategoriesManager() {
       description: '',
       imageUrl: '',
       isActive: true,
-      showBadgeOnProducts: true
+      showBadgeOnProducts: true,
+      visibleOnTaskbar: true
     });
     setEditingSubCategory(null);
   };
@@ -123,7 +126,8 @@ export default function SubCategoriesManager() {
       description: subCategory.description,
       imageUrl: subCategory.imageUrl || '',
       isActive: subCategory.isActive,
-      showBadgeOnProducts: subCategory.showBadgeOnProducts !== false
+      showBadgeOnProducts: subCategory.showBadgeOnProducts !== false,
+      visibleOnTaskbar: subCategory.visibleOnTaskbar !== false
     });
     setDialogOpen(true);
   };
@@ -385,6 +389,23 @@ export default function SubCategoriesManager() {
               <Switch
                 checked={formData.showBadgeOnProducts}
                 onCheckedChange={(checked) => setFormData({ ...formData, showBadgeOnProducts: checked })}
+              />
+            </div>
+
+            {/* Visible on Taskbar */}
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label className="flex items-center gap-2">
+                  <Menu className="h-4 w-4 text-primary" />
+                  Visible on Taskbar
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  Show this sub-category in the Shop dropdown menu in header
+                </p>
+              </div>
+              <Switch
+                checked={formData.visibleOnTaskbar}
+                onCheckedChange={(checked) => setFormData({ ...formData, visibleOnTaskbar: checked })}
               />
             </div>
           </div>

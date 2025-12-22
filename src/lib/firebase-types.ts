@@ -51,6 +51,9 @@ export interface Category {
   rockstarOrder: number | null; // 1-6 position, null if not rockstar
   rockstarImageUrl: string | null; // Cover image for homepage display
   
+  // Taskbar visibility (mega menu in header)
+  visibleOnTaskbar: boolean;
+  
   // Featured products limit for this category
   featuredProductLimit: number; // Default 4
   
@@ -77,6 +80,7 @@ export interface SubCategory {
   
   // Display settings
   showBadgeOnProducts: boolean; // Controls if badge shows in shop
+  visibleOnTaskbar: boolean; // Controls visibility in header mega menu
   
   // Metadata
   order: number;
@@ -226,6 +230,10 @@ export interface StoreSettings {
   // Currency
   currency: string;
   currencySymbol: string;
+  
+  // WhatsApp settings
+  whatsappEnabled: boolean;
+  whatsappNumber: string;
   
   updatedAt: Timestamp;
 }

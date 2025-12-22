@@ -8,6 +8,7 @@
  */
 
 import { Link } from "react-router-dom";
+import { useEffect } from "react";
 import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
@@ -16,6 +17,11 @@ import artisanAnimated from "@/assets/artisan_animated.png";
 import artisan2 from "@/assets/artisan_2.jpg";
 
 const OurStory = () => {
+  // Scroll to top on mount
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
   return (
     <Layout>
       <SEO 

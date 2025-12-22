@@ -13,6 +13,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 const CategorySection = () => {
   const { rockstarCategories, loading } = useCategories();
 
+  // Don't render anything if no rockstar categories and not loading
+  if (!loading && rockstarCategories.length === 0) {
+    return null;
+  }
+
   return (
     <section className="py-12 md:py-16 lg:py-24 bg-background">
       <div className="container mx-auto px-4">
@@ -38,9 +43,7 @@ const CategorySection = () => {
             ))}
           </div>
         ) : rockstarCategories.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-muted-foreground">No categories available yet.</p>
-          </div>
+          null
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
             {rockstarCategories.map((category, index) => (

@@ -13,8 +13,10 @@ import {
   Truck, 
   Home,
   Loader2,
-  Save
+  Save,
+  MessageCircle
 } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
 
 export default function SettingsPage() {
   const { settings, loading, updateSettings } = useStoreSettings();
@@ -28,6 +30,8 @@ export default function SettingsPage() {
     defaultShippingCost: 0,
     maxRockstarCategories: 6,
     maxFeaturedProducts: 4,
+    whatsappEnabled: true,
+    whatsappNumber: '',
   });
   const [initialized, setInitialized] = useState(false);
 
@@ -41,11 +45,13 @@ export default function SettingsPage() {
       defaultShippingCost: settings.defaultShippingCost || 0,
       maxRockstarCategories: settings.maxRockstarCategories || 6,
       maxFeaturedProducts: settings.maxFeaturedProducts || 4,
+      whatsappEnabled: settings.whatsappEnabled !== false,
+      whatsappNumber: settings.whatsappNumber || '',
     });
     setInitialized(true);
   }
 
-  const handleChange = (field: string, value: string | number) => {
+  const handleChange = (field: string, value: string | number | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
@@ -220,6 +226,46 @@ export default function SettingsPage() {
                 </p>
               </div>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* WhatsApp Settings */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <MessageCircle className="h-4 w-4" /> WhatsApp Settings
+            </CardTitle>
+            <CardDescription>
+              Configure the WhatsApp chat button on your store
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label>Enable WhatsApp Chat Button</Label>
+                <p className="text-sm text-muted-foreground">
+                  Show floating WhatsApp button on all pages
+                </p>
+              </div>
+              <Switch
+                checked={formData.whatsappEnabled}
+                onCheckedChange={(checked) => handleChange('whatsappEnabled', checked)}
+              />
+            </div>
+            {formData.whatsappEnabled && (
+              <div className="space-y-2">
+                <Label htmlFor="whatsappNumber">WhatsApp Number</Label>
+                <Input
+                  id="whatsappNumber"
+                  value={formData.whatsappNumber}
+                  onChange={(e) => handleChange('whatsappNumber', e.target.value)}
+                  placeholder="919887238849"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Enter with country code, no + or spaces (e.g., 919887238849)
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

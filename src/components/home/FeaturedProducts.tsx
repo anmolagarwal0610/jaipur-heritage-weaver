@@ -18,6 +18,11 @@ const FeaturedProducts = () => {
   // Limit to 8 products for homepage display
   const displayProducts = featuredProducts.slice(0, 8);
 
+  // Don't render anything if no featured products and not loading
+  if (!loading && displayProducts.length === 0) {
+    return null;
+  }
+
   return (
     <section className="py-12 md:py-16 lg:py-24 bg-background">
       <div className="container mx-auto px-4">
@@ -42,10 +47,6 @@ const FeaturedProducts = () => {
                 <Skeleton className="h-4 w-1/2" />
               </div>
             ))}
-          </div>
-        ) : displayProducts.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-muted-foreground">No featured products yet.</p>
           </div>
         ) : (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
