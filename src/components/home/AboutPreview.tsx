@@ -10,7 +10,7 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
-import displayImage from "@/assets/display_variety.jpg";
+import displayImage from "@/assets/display_variety.webp";
 
 const AboutPreview = () => {
   return (
