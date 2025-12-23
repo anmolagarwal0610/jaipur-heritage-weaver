@@ -1,7 +1,6 @@
 /**
  * MOBILE RESPONSIVENESS GUIDELINES:
  * - Grid stacks to single column on mobile
- * - Images use lazy loading for performance
  * - Touch targets minimum 44x44px
  * - Maintain responsive design in all future edits
  */
@@ -14,28 +13,29 @@ const testimonials = [
     name: "Priya Sharma",
     location: "Mumbai",
     rating: 5,
-    text: "The quality of the bedsheets is exceptional! The block print is so intricate and the cotton is incredibly soft. My bedroom feels like a royal chamber now.",
-    image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80",
+    text: "Arre, what quality yaar! The bedsheet print is so fine-fine, even mummy said 'beta, where you found this?' Cotton is butter soft. Bedroom looking like 5-star hotel now!",
   },
   {
     id: 2,
     name: "Rajesh Gupta",
     location: "Delhi",
     rating: 5,
-    text: "I've been buying from Jaipur Touch for over 2 years. Their quilts are perfect for Delhi winters and the designs are timeless. Highly recommended!",
-    image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80",
+    text: "Main 2 saal se order kar raha hoon. Delhi ki thand ke liye their quilts are perfect bhai. Design timeless hai - guests always ask where I got it from. 100% recommend!",
   },
   {
     id: 3,
     name: "Anita Reddy",
     location: "Bangalore",
     rating: 5,
-    text: "The curtains I ordered transformed my living room completely. The colors are vibrant yet elegant. Customer service was also very helpful.",
-    image: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=150&q=80",
+    text: "The curtains I ordered na, completely transformed my living room. Colors are so vibrant yet elegant. Customer service was very helpful, they called to confirm everything properly.",
   },
 ];
 
 const TestimonialsSection = () => {
+  const getInitials = (name: string) => {
+    return name.split(' ').map(n => n[0]).join('').toUpperCase();
+  };
+
   return (
     <section className="py-12 md:py-16 lg:py-24 bg-background">
       <div className="container mx-auto px-4">
@@ -58,13 +58,11 @@ const TestimonialsSection = () => {
               <Quote className="absolute top-3 right-3 md:top-4 md:right-4 w-6 h-6 md:w-8 md:h-8 text-gold/20" />
               
               <div className="flex items-center gap-3 md:gap-4 mb-3 md:mb-4">
-                <img
-                  src={testimonial.image}
-                  alt={`${testimonial.name} - Jaipur Touch customer`}
-                  className="w-10 h-10 md:w-12 md:h-12 rounded-full object-cover"
-                  loading="lazy"
-                  decoding="async"
-                />
+                <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-gold/10 flex items-center justify-center shrink-0">
+                  <span className="text-gold font-serif font-semibold text-sm md:text-base">
+                    {getInitials(testimonial.name)}
+                  </span>
+                </div>
                 <div>
                   <h4 className="font-serif font-semibold text-foreground text-sm md:text-base">
                     {testimonial.name}
