@@ -25,6 +25,10 @@ import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
 import OrderConfirmation from "./pages/OrderConfirmation";
 import NotFound from "./pages/NotFound";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import TermsOfService from "./pages/TermsOfService";
+import ReturnPolicy from "./pages/ReturnPolicy";
+import ShippingPolicy from "./pages/ShippingPolicy";
 
 // Lazy-load auth/dashboard pages (less frequently visited)
 const Auth = lazy(() => import("./pages/Auth"));
@@ -78,6 +82,10 @@ const App = () => (
                 <Route path="/product/:productId" element={<ProductDetail />} />
                 <Route path="/our-story" element={<OurStory />} />
                 <Route path="/contact" element={<Contact />} />
+                <Route path="/privacy" element={<PrivacyPolicy />} />
+                <Route path="/terms" element={<TermsOfService />} />
+                <Route path="/returns" element={<ReturnPolicy />} />
+                <Route path="/shipping" element={<ShippingPolicy />} />
                 <Route path="/cart" element={<Cart />} />
                 <Route path="/checkout" element={<Checkout />} />
                 <Route path="/order-confirmation/:orderId" element={<OrderConfirmation />} />

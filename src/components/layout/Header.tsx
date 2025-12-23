@@ -27,13 +27,11 @@ import { useCart } from "@/contexts/CartContext";
 import ShopMegaMenu from "./ShopMegaMenu";
 
 const navigation = [
-  { name: "Home", href: "/" },
   { name: "Our Story", href: "/our-story" },
   { name: "Contact", href: "/contact" },
 ];
 
 const mobileNavigation = [
-  { name: "Home", href: "/" },
   { name: "Shop", href: "/shop" },
   { name: "Our Story", href: "/our-story" },
   { name: "Contact", href: "/contact" },
@@ -80,8 +78,8 @@ const Header = () => {
       <nav className="bg-background/95 backdrop-blur-md border-b border-border/50">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-14 md:h-18 lg:h-20">
-            {/* Left: Mobile Menu + Logo */}
-            <div className="flex items-center gap-2 md:gap-4">
+            {/* Left: Mobile Menu + Logo + Desktop Navigation */}
+            <div className="flex items-center gap-2 md:gap-6 lg:gap-8">
               {/* Mobile Menu */}
               <Sheet open={isOpen} onOpenChange={setIsOpen}>
                 <SheetTrigger asChild className="md:hidden">
@@ -129,7 +127,7 @@ const Header = () => {
                             onClick={() => setIsOpen(false)}
                             className="flex items-center gap-2 text-foreground hover:text-gold min-h-[44px]"
                           >
-                            <Package className="h-5 w-5" />
+                            <Package className="mr-2 h-4 w-4" />
                             My Orders
                           </Link>
                           <Link
@@ -137,7 +135,7 @@ const Header = () => {
                             onClick={() => setIsOpen(false)}
                             className="flex items-center gap-2 text-foreground hover:text-gold min-h-[44px]"
                           >
-                            <UserCircle className="h-5 w-5" />
+                            <UserCircle className="mr-2 h-4 w-4" />
                             My Account
                           </Link>
                           <button
@@ -147,7 +145,7 @@ const Header = () => {
                             }}
                             className="flex items-center gap-2 text-destructive hover:text-destructive/80 min-h-[44px] w-full"
                           >
-                            <LogOut className="h-5 w-5" />
+                            <LogOut className="mr-2 h-4 w-4" />
                             Sign Out
                           </button>
                         </div>
@@ -157,7 +155,7 @@ const Header = () => {
                           onClick={() => setIsOpen(false)}
                           className="flex items-center gap-2 text-foreground hover:text-gold min-h-[44px]"
                         >
-                          <User className="h-5 w-5" />
+                          <User className="mr-2 h-4 w-4" />
                           Sign In
                         </Link>
                       )}
@@ -170,47 +168,31 @@ const Header = () => {
               <Link to="/" className="shrink-0">
                 <Logo />
               </Link>
-            </div>
 
-            {/* Center: Desktop Navigation */}
-            <div className="hidden md:flex items-center gap-6 lg:gap-8">
-              <Link
-                to="/"
-                className={cn(
-                  "text-sm font-medium transition-colors hover:text-gold relative group min-h-[44px] flex items-center",
-                  location.pathname === "/"
-                    ? "text-gold"
-                    : "text-foreground"
-                )}
-              >
-                Home
-                <span className={cn(
-                  "absolute -bottom-1 left-0 w-full h-0.5 bg-gold transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left",
-                  location.pathname === "/" && "scale-x-100"
-                )} />
-              </Link>
+              {/* Desktop Navigation - Left aligned */}
+              <div className="hidden md:flex items-center gap-5 lg:gap-6">
+                {/* Shop Mega Menu */}
+                <ShopMegaMenu />
 
-              {/* Shop Mega Menu */}
-              <ShopMegaMenu />
-
-              {navigation.slice(1).map((item) => (
-                <Link
-                  key={item.name}
-                  to={item.href}
-                  className={cn(
-                    "text-sm font-medium transition-colors hover:text-gold relative group min-h-[44px] flex items-center",
-                    location.pathname === item.href
-                      ? "text-gold"
-                      : "text-foreground"
-                  )}
-                >
-                  {item.name}
-                  <span className={cn(
-                    "absolute -bottom-1 left-0 w-full h-0.5 bg-gold transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left",
-                    location.pathname === item.href && "scale-x-100"
-                  )} />
-                </Link>
-              ))}
+                {navigation.map((item) => (
+                  <Link
+                    key={item.name}
+                    to={item.href}
+                    className={cn(
+                      "text-sm font-medium transition-colors hover:text-gold relative group min-h-[44px] flex items-center",
+                      location.pathname === item.href
+                        ? "text-gold"
+                        : "text-foreground"
+                    )}
+                  >
+                    {item.name}
+                    <span className={cn(
+                      "absolute -bottom-1 left-0 w-full h-0.5 bg-gold transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left",
+                      location.pathname === item.href && "scale-x-100"
+                    )} />
+                  </Link>
+                ))}
+              </div>
             </div>
 
             {/* Right: Action Icons */}

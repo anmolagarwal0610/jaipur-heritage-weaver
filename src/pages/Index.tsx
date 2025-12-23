@@ -15,8 +15,12 @@ import AboutPreview from "@/components/home/AboutPreview";
 import TestimonialsSection from "@/components/home/TestimonialsSection";
 import InstagramFeed from "@/components/home/InstagramFeed";
 import SEO from "@/components/SEO";
+import { usePreloadSubcategoryImages } from "@/hooks/usePreloadSubcategoryImages";
 
 const Index = () => {
+  // Preload subcategory images for instant Shop dropdown
+  usePreloadSubcategoryImages();
+
   return (
     <Layout>
       <SEO 

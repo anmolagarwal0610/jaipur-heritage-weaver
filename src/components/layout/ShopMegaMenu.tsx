@@ -60,7 +60,7 @@ const ShopMegaMenu = () => {
     <NavigationMenu>
       <NavigationMenuList>
         <NavigationMenuItem>
-          <NavigationMenuTrigger className="bg-transparent hover:bg-transparent focus:bg-transparent data-[state=open]:bg-transparent text-sm font-medium text-foreground hover:text-gold transition-colors h-auto px-0 py-0">
+          <NavigationMenuTrigger className="bg-transparent hover:bg-transparent focus:bg-transparent data-[state=open]:bg-transparent text-sm font-medium text-foreground hover:text-gold transition-colors h-auto px-0 py-0 [&>svg]:hidden">
             Shop
           </NavigationMenuTrigger>
           <NavigationMenuContent className="bg-background border border-border shadow-xl">
