@@ -24,6 +24,8 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Heart, Minus, Plus, ShoppingBag, MessageCircle, Check, Truck } from "lucide-react";
+import OptimizedImage from "@/components/ui/optimized-image";
+import { getOptimizedImageUrl } from "@/lib/image-utils";
 import { useProduct, useRelatedProducts } from "@/hooks/useProducts";
 import { useCart } from "@/contexts/CartContext";
 
@@ -172,7 +174,7 @@ const ProductDetail = () => {
                   }`}
                 >
                   <img
-                    src={img.url}
+                    src={getOptimizedImageUrl(img.url, 400)}
                     alt={img.alt}
                     className="w-full h-full object-cover"
                   />
@@ -183,10 +185,11 @@ const ProductDetail = () => {
             {/* Main Image */}
             <div className="flex-1 relative">
               <div className="aspect-square rounded-xl overflow-hidden bg-secondary">
-                <img
+                <OptimizedImage
                   src={productImages[selectedImage]?.url || product.primaryImageUrl}
                   alt={product.name}
                   className="w-full h-full object-cover"
+                  loading="eager"
                 />
               </div>
               {product.badge && (
@@ -208,7 +211,7 @@ const ProductDetail = () => {
                     }`}
                   >
                     <img
-                      src={img.url}
+                      src={getOptimizedImageUrl(img.url, 400)}
                       alt={img.alt}
                       className="w-full h-full object-cover"
                     />
@@ -418,11 +421,10 @@ const ProductDetail = () => {
                   className="group"
                 >
                   <div className="relative aspect-[3/4] rounded-lg overflow-hidden bg-secondary mb-3">
-                    <img
-                      src={relProduct.primaryImageUrl || '/placeholder.svg'}
+                    <OptimizedImage
+                      src={relProduct.primaryImageUrl}
                       alt={relProduct.name}
                       className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                      loading="lazy"
                     />
                     {relProduct.badge && (
                       <span className="absolute top-2 left-2 bg-terracotta text-terracotta-foreground text-[10px] font-medium px-2 py-0.5 rounded">
