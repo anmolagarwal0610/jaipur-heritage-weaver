@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { ShoppingBag, Heart } from "lucide-react";
 import { useProducts } from "@/hooks/useProducts";
 import { Skeleton } from "@/components/ui/skeleton";
+import OptimizedImage from "@/components/ui/optimized-image";
 
 const FeaturedProducts = () => {
   const { featuredProducts, loading } = useProducts({ featuredOnly: true });
@@ -58,12 +59,10 @@ const FeaturedProducts = () => {
                 style={{ animationDelay: `${index * 0.1}s` }}
               >
                 <div className="relative aspect-[3/4] rounded-lg md:rounded-xl overflow-hidden bg-secondary mb-3 md:mb-4">
-                  <img
-                    src={product.primaryImageUrl || '/placeholder.svg'}
+                  <OptimizedImage
+                    src={product.primaryImageUrl}
                     alt={`${product.name} - Handcrafted Jaipuri textile`}
                     className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                    loading="lazy"
-                    decoding="async"
                   />
                   {product.badge && (
                     <span className="absolute top-2 left-2 md:top-3 md:left-3 bg-terracotta text-terracotta-foreground text-[10px] md:text-xs font-medium px-2 py-0.5 md:py-1 rounded">

@@ -17,6 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { ShoppingBag, Heart, Filter, X } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import OptimizedImage from "@/components/ui/optimized-image";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCategories } from "@/hooks/useCategories";
 import { useProducts } from "@/hooks/useProducts";
@@ -261,12 +262,10 @@ const Shop = () => {
                     style={{ animationDelay: `${index * 0.05}s` }}
                   >
                     <div className="relative aspect-[3/4] rounded-lg md:rounded-xl overflow-hidden bg-secondary mb-3 md:mb-4">
-                      <img
-                        src={product.primaryImageUrl || '/placeholder.svg'}
+                      <OptimizedImage
+                        src={product.primaryImageUrl}
                         alt={`${product.name} - Handcrafted Jaipuri textile`}
                         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                        loading="lazy"
-                        decoding="async"
                       />
                       {product.badge && (
                         <span className="absolute top-2 left-2 md:top-3 md:left-3 bg-terracotta text-terracotta-foreground text-[10px] md:text-xs font-medium px-1.5 py-0.5 md:px-2 md:py-1 rounded">

@@ -9,6 +9,7 @@
 import { Link } from "react-router-dom";
 import { useCategories } from "@/hooks/useCategories";
 import { Skeleton } from "@/components/ui/skeleton";
+import OptimizedImage from "@/components/ui/optimized-image";
 
 const CategorySection = () => {
   const { rockstarCategories, loading } = useCategories();
@@ -53,12 +54,10 @@ const CategorySection = () => {
                 className="group relative aspect-[4/5] rounded-lg md:rounded-xl overflow-hidden animate-fade-in"
                 style={{ animationDelay: `${index * 0.1}s` }}
               >
-                <img
-                  src={category.rockstarImageUrl || category.imageUrl || '/placeholder.svg'}
+              <OptimizedImage
+                  src={category.rockstarImageUrl || category.imageUrl}
                   alt={`Shop ${category.name} - Handcrafted Jaipuri textiles`}
                   className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                  loading="lazy"
-                  decoding="async"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-primary/80 via-primary/20 to-transparent" />
                 <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-4 md:p-6">

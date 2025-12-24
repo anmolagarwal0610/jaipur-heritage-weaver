@@ -25,22 +25,22 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCart } from "@/contexts/CartContext";
 import ShopMegaMenu from "./ShopMegaMenu";
+import MobileShopMenu from "./MobileShopMenu";
+import SearchBar from "./SearchBar";
 
 const navigation = [
   { name: "Our Story", href: "/our-story" },
   { name: "Contact", href: "/contact" },
 ];
 
-const mobileNavigation = [
-  { name: "Shop", href: "/shop" },
-  { name: "Our Story", href: "/our-story" },
-  { name: "Contact", href: "/contact" },
-];
+type MobileMenuView = 'main' | 'shop';
 
 const Header = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
+  const [mobileMenuView, setMobileMenuView] = useState<MobileMenuView>('main');
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const { user, userProfile, logout } = useAuth();
   const { getItemCount } = useCart();
   
@@ -65,6 +65,18 @@ const Header = () => {
     return 'U';
   };
 
+  const handleMobileMenuClose = () => {
+    setIsOpen(false);
+    setMobileMenuView('main');
+  };
+
+  const handleSheetOpenChange = (open: boolean) => {
+    setIsOpen(open);
+    if (!open) {
+      setMobileMenuView('main');
+    }
+  };
+
   return (
     <header className="sticky top-0 z-50 w-full">
       {/* Announcement Bar */}
@@ -81,86 +93,104 @@ const Header = () => {
             {/* Left: Mobile Menu + Logo + Desktop Navigation */}
             <div className="flex items-center gap-2 md:gap-6 lg:gap-8">
               {/* Mobile Menu */}
-              <Sheet open={isOpen} onOpenChange={setIsOpen}>
+              <Sheet open={isOpen} onOpenChange={handleSheetOpenChange}>
                 <SheetTrigger asChild className="md:hidden">
                   <Button variant="ghost" size="icon" className="shrink-0 h-10 w-10" aria-label="Open menu">
                     <Menu className="h-5 w-5" />
                   </Button>
                 </SheetTrigger>
-                <SheetContent side="left" className="w-[280px] sm:w-80">
-                  <div className="flex flex-col gap-6 mt-8">
-                    <Logo className="mb-4" />
-                    {mobileNavigation.map((item) => (
-                      <Link
-                        key={item.name}
-                        to={item.href}
-                        onClick={() => setIsOpen(false)}
-                        className={cn(
-                          "text-lg font-serif transition-colors hover:text-gold min-h-[44px] flex items-center",
-                          location.pathname === item.href
-                            ? "text-gold"
-                            : "text-foreground"
-                        )}
+                <SheetContent side="left" className="w-[300px] sm:w-80 p-0">
+                  {mobileMenuView === 'shop' ? (
+                    <MobileShopMenu 
+                      onClose={handleMobileMenuClose}
+                      onBack={() => setMobileMenuView('main')}
+                    />
+                  ) : (
+                    <div className="flex flex-col gap-6 p-6 pt-8">
+                      <Logo className="mb-4" />
+                      
+                      {/* Shop - Opens category submenu */}
+                      <button
+                        onClick={() => setMobileMenuView('shop')}
+                        className="flex items-center justify-between text-lg font-serif transition-colors hover:text-gold min-h-[44px] text-foreground"
                       >
-                        {item.name}
-                      </Link>
-                    ))}
-
-                    {/* Mobile User Section */}
-                    <div className="border-t border-border pt-6 mt-2">
-                      {user ? (
-                        <div className="space-y-4">
-                          <div className="flex items-center gap-3">
-                            <Avatar className="h-10 w-10">
-                              <AvatarImage src={user.photoURL || undefined} alt="Profile" />
-                              <AvatarFallback className="bg-gold/10 text-gold">
-                                {getInitials()}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div>
-                              <p className="font-medium text-sm">{userProfile?.displayName || 'User'}</p>
-                              <p className="text-xs text-muted-foreground">{user.email}</p>
-                            </div>
-                          </div>
-                          <Link
-                            to="/dashboard?tab=orders"
-                            onClick={() => setIsOpen(false)}
-                            className="flex items-center gap-2 text-foreground hover:text-gold min-h-[44px]"
-                          >
-                            <Package className="mr-2 h-4 w-4" />
-                            My Orders
-                          </Link>
-                          <Link
-                            to="/dashboard"
-                            onClick={() => setIsOpen(false)}
-                            className="flex items-center gap-2 text-foreground hover:text-gold min-h-[44px]"
-                          >
-                            <UserCircle className="mr-2 h-4 w-4" />
-                            My Account
-                          </Link>
-                          <button
-                            onClick={() => {
-                              handleLogout();
-                              setIsOpen(false);
-                            }}
-                            className="flex items-center gap-2 text-destructive hover:text-destructive/80 min-h-[44px] w-full"
-                          >
-                            <LogOut className="mr-2 h-4 w-4" />
-                            Sign Out
-                          </button>
-                        </div>
-                      ) : (
+                        <span>Shop</span>
+                        <ChevronDown className="w-4 h-4 -rotate-90" />
+                      </button>
+                      
+                      {/* Other navigation links */}
+                      {navigation.map((item) => (
                         <Link
-                          to="/auth"
-                          onClick={() => setIsOpen(false)}
-                          className="flex items-center gap-2 text-foreground hover:text-gold min-h-[44px]"
+                          key={item.name}
+                          to={item.href}
+                          onClick={handleMobileMenuClose}
+                          className={cn(
+                            "text-lg font-serif transition-colors hover:text-gold min-h-[44px] flex items-center",
+                            location.pathname === item.href
+                              ? "text-gold"
+                              : "text-foreground"
+                          )}
                         >
-                          <User className="mr-2 h-4 w-4" />
-                          Sign In
+                          {item.name}
                         </Link>
-                      )}
+                      ))}
+
+                      {/* Mobile User Section */}
+                      <div className="border-t border-border pt-6 mt-2">
+                        {user ? (
+                          <div className="space-y-4">
+                            <div className="flex items-center gap-3">
+                              <Avatar className="h-10 w-10">
+                                <AvatarImage src={user.photoURL || undefined} alt="Profile" />
+                                <AvatarFallback className="bg-gold/10 text-gold">
+                                  {getInitials()}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <p className="font-medium text-sm">{userProfile?.displayName || 'User'}</p>
+                                <p className="text-xs text-muted-foreground">{user.email}</p>
+                              </div>
+                            </div>
+                            <Link
+                              to="/dashboard?tab=orders"
+                              onClick={handleMobileMenuClose}
+                              className="flex items-center gap-2 text-foreground hover:text-gold min-h-[44px]"
+                            >
+                              <Package className="mr-2 h-4 w-4" />
+                              My Orders
+                            </Link>
+                            <Link
+                              to="/dashboard"
+                              onClick={handleMobileMenuClose}
+                              className="flex items-center gap-2 text-foreground hover:text-gold min-h-[44px]"
+                            >
+                              <UserCircle className="mr-2 h-4 w-4" />
+                              My Account
+                            </Link>
+                            <button
+                              onClick={() => {
+                                handleLogout();
+                                handleMobileMenuClose();
+                              }}
+                              className="flex items-center gap-2 text-destructive hover:text-destructive/80 min-h-[44px] w-full"
+                            >
+                              <LogOut className="mr-2 h-4 w-4" />
+                              Sign Out
+                            </button>
+                          </div>
+                        ) : (
+                          <Link
+                            to="/auth"
+                            onClick={handleMobileMenuClose}
+                            className="flex items-center gap-2 text-foreground hover:text-gold min-h-[44px]"
+                          >
+                            <User className="mr-2 h-4 w-4" />
+                            Sign In
+                          </Link>
+                        )}
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </SheetContent>
               </Sheet>
 
@@ -196,8 +226,23 @@ const Header = () => {
             </div>
 
             {/* Right: Action Icons */}
-            <div className="flex items-center gap-0.5 md:gap-1 lg:gap-2">
-              <Button variant="ghost" size="icon" className="hidden md:flex h-10 w-10" aria-label="Search">
+            <div className="flex items-center gap-0.5 md:gap-1 lg:gap-2 relative">
+              {/* Search Bar */}
+              <SearchBar 
+                isOpen={isSearchOpen} 
+                onClose={() => setIsSearchOpen(false)} 
+              />
+              
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className={cn(
+                  "hidden md:flex h-10 w-10 transition-opacity",
+                  isSearchOpen && "opacity-0 pointer-events-none"
+                )} 
+                aria-label="Search"
+                onClick={() => setIsSearchOpen(true)}
+              >
                 <Search className="h-4 w-4" />
               </Button>
 
@@ -205,7 +250,14 @@ const Header = () => {
               {user ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="hidden md:flex h-10 gap-2 px-2" aria-label="Account menu">
+                    <Button 
+                      variant="ghost" 
+                      className={cn(
+                        "hidden md:flex h-10 gap-2 px-2 transition-opacity",
+                        isSearchOpen && "opacity-0 pointer-events-none"
+                      )} 
+                      aria-label="Account menu"
+                    >
                       <Avatar className="h-7 w-7">
                         <AvatarImage src={user.photoURL || undefined} alt="Profile" />
                         <AvatarFallback className="bg-gold/10 text-gold text-xs">
@@ -247,7 +299,10 @@ const Header = () => {
                   </DropdownMenuContent>
                 </DropdownMenu>
               ) : (
-                <Link to="/auth" className="hidden md:block">
+                <Link to="/auth" className={cn(
+                  "hidden md:block transition-opacity",
+                  isSearchOpen && "opacity-0 pointer-events-none"
+                )}>
                   <Button variant="ghost" size="icon" className="h-10 w-10" aria-label="Sign in">
                     <User className="h-4 w-4" />
                   </Button>
@@ -255,7 +310,15 @@ const Header = () => {
               )}
 
               <Link to="/cart">
-                <Button variant="ghost" size="icon" className="relative h-10 w-10" aria-label="Shopping cart">
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className={cn(
+                    "relative h-10 w-10 transition-opacity",
+                    isSearchOpen && "opacity-0 pointer-events-none"
+                  )} 
+                  aria-label="Shopping cart"
+                >
                   <ShoppingBag className="h-4 w-4" />
                   {cartCount > 0 && (
                     <span className="absolute -top-0.5 -right-0.5 bg-gold text-gold-foreground text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-medium">
