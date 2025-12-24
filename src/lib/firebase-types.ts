@@ -90,6 +90,14 @@ export interface SubCategory {
   updatedAt: Timestamp;
 }
 
+// Product color variant with its own images
+export interface ProductColorVariant {
+  id: string;
+  colorName: string;
+  colorHex: string; // Hex code for the swatch
+  images: ProductImage[];
+}
+
 // Product document with home decor specific fields
 export interface Product {
   id: string;
@@ -109,9 +117,12 @@ export interface Product {
   subCategoryId: string | null;
   subCategoryName: string | null;
   
-  // Images
+  // Images (default/no-color images)
   images: ProductImage[];
   primaryImageUrl: string; // Main display image
+  
+  // Color Variants (each has its own images)
+  colorVariants: ProductColorVariant[];
   
   // Inventory
   sku: string;
@@ -125,14 +136,14 @@ export interface Product {
   // Home decor specific attributes
   fabric: string | null; // Cotton, Silk, Linen, etc.
   material: string | null; // Thread count, GSM, etc.
-  size: string | null; // King, Queen, Standard, Custom dimensions
+  sizes: string[]; // Multiple sizes: King, Queen, Standard, etc.
   dimensions: {
     length: number | null;
     width: number | null;
     height: number | null;
     unit: 'cm' | 'inch';
   } | null;
-  color: string | null;
+  color: string | null; // Legacy single color field
   pattern: string | null; // Block print, Floral, Geometric, etc.
   careInstructions: string | null;
   
@@ -222,6 +233,9 @@ export interface StoreSettings {
   // Homepage settings
   maxRockstarCategories: number; // Default 6
   maxFeaturedProducts: number; // Default featured per category
+  
+  // Product settings
+  productSizeOptions: string[]; // Configurable size options
   
   // Shipping
   freeShippingThreshold: number;

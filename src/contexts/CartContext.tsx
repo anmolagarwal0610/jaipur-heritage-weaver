@@ -12,6 +12,7 @@ export interface CartItem {
   price: number;
   image: string;
   size: string | null;
+  color: string | null; // Color variant name
   quantity: number;
   stockQuantity: number; // Track available stock for validation
 }
@@ -73,7 +74,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const addToCart = useCallback((item: CartItem) => {
     setItems(prevItems => {
       const existingIndex = prevItems.findIndex(
-        i => i.productId === item.productId && i.size === item.size
+        i => i.productId === item.productId && i.size === item.size && i.color === item.color
       );
 
       if (existingIndex >= 0) {
@@ -107,22 +108,22 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     });
   }, []);
 
-  const removeFromCart = useCallback((productId: string, size: string | null) => {
+  const removeFromCart = useCallback((productId: string, size: string | null, color: string | null = null) => {
     setItems(prevItems => {
       const filtered = prevItems.filter(
-        i => !(i.productId === productId && i.size === size)
+        i => !(i.productId === productId && i.size === size && i.color === color)
       );
       toast.success('Removed from cart');
       return filtered;
     });
   }, []);
 
-  const updateQuantity = useCallback((productId: string, size: string | null, quantity: number) => {
+  const updateQuantity = useCallback((productId: string, size: string | null, quantity: number, color: string | null = null) => {
     if (quantity < 1) return;
     
     setItems(prevItems => {
       return prevItems.map(item => {
-        if (item.productId === productId && item.size === size) {
+        if (item.productId === productId && item.size === size && item.color === color) {
           // Check stock limit
           if (quantity > item.stockQuantity) {
             toast.error(`Only ${item.stockQuantity} available in stock`);

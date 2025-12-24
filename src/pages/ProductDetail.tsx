@@ -38,13 +38,17 @@ const ProductDetail = () => {
   const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [selectedSize, setSelectedSize] = useState<string>("");
+  const [selectedColor, setSelectedColor] = useState<string | null>(null);
 
-  // Set default size when product loads
+  // Set default size and color when product loads
   useEffect(() => {
-    if (product?.size) {
-      setSelectedSize(product.size);
+    if (product?.sizes?.length > 0) {
+      setSelectedSize(product.sizes[0]);
     }
-  }, [product?.size]);
+    if (product?.colorVariants?.length > 0) {
+      setSelectedColor(product.colorVariants[0].colorName);
+    }
+  }, [product?.sizes, product?.colorVariants]);
 
   const handleAddToCart = () => {
     if (product) {
@@ -52,12 +56,22 @@ const ProductDetail = () => {
       if (quantity > product.stockQuantity) {
         return;
       }
+      // Get the correct image based on selected color
+      let displayImage = product.primaryImageUrl;
+      if (selectedColor && product.colorVariants?.length > 0) {
+        const colorVariant = product.colorVariants.find(c => c.colorName === selectedColor);
+        if (colorVariant?.images?.length > 0) {
+          displayImage = colorVariant.images[0].url;
+        }
+      }
+      
       addToCart({
         productId: product.id,
         name: product.name,
         price: product.price,
-        image: product.primaryImageUrl,
-        size: selectedSize || product.size || null,
+        image: displayImage,
+        size: selectedSize || null,
+        color: selectedColor,
         quantity,
         stockQuantity: product.stockQuantity,
       });
@@ -66,8 +80,24 @@ const ProductDetail = () => {
 
   const handleWhatsAppOrder = () => {
     if (!product) return;
-    const message = `Hi! I'd like to order:\n\n${product.name}${selectedSize ? ` (${selectedSize})` : ''}\nQuantity: ${quantity}\nPrice: ₹${(product.price * quantity).toLocaleString()}\n\nPlease confirm availability.`;
+    const sizeText = selectedSize ? ` (Size: ${selectedSize})` : '';
+    const colorText = selectedColor ? ` (Color: ${selectedColor})` : '';
+    const message = `Hi! I'd like to order:\n\n${product.name}${sizeText}${colorText}\nQuantity: ${quantity}\nPrice: ₹${(product.price * quantity).toLocaleString()}\n\nPlease confirm availability.`;
     window.open(`https://wa.me/919887238849?text=${encodeURIComponent(message)}`, '_blank');
+  };
+  
+  // Get current images based on selected color
+  const getCurrentImages = () => {
+    if (selectedColor && product?.colorVariants?.length > 0) {
+      const colorVariant = product.colorVariants.find(c => c.colorName === selectedColor);
+      if (colorVariant?.images?.length > 0) {
+        return colorVariant.images.sort((a, b) => a.order - b.order);
+      }
+    }
+    // Fallback to default images
+    return product?.images?.length > 0 
+      ? product.images.sort((a, b) => a.order - b.order) 
+      : [{ id: '1', url: product?.primaryImageUrl || '', alt: product?.name || '', order: 0, isPrimary: true }];
   };
 
   const discount = product?.compareAtPrice 
@@ -121,9 +151,7 @@ const ProductDetail = () => {
     );
   }
 
-  const productImages = product.images?.length > 0 
-    ? product.images.sort((a, b) => a.order - b.order) 
-    : [{ id: '1', url: product.primaryImageUrl, alt: product.name, order: 0, isPrimary: true }];
+  const productImages = getCurrentImages();
 
   return (
     <Layout>
@@ -261,18 +289,52 @@ const ProductDetail = () => {
               </span>
             </div>
 
+            {/* Color Selector */}
+            {product.colorVariants && product.colorVariants.length > 0 && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">
+                  Color: <span className="text-muted-foreground font-normal">{selectedColor}</span>
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {product.colorVariants.map((variant) => (
+                    <button
+                      key={variant.id}
+                      onClick={() => {
+                        setSelectedColor(variant.colorName);
+                        setSelectedImage(0);
+                      }}
+                      className={`w-10 h-10 rounded-full border-2 transition-all ${
+                        selectedColor === variant.colorName
+                          ? 'border-gold ring-2 ring-gold/30 ring-offset-2'
+                          : 'border-border hover:border-gold/50'
+                      }`}
+                      style={{ backgroundColor: variant.colorHex }}
+                      title={variant.colorName}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Size Selector */}
-            {product.size && (
+            {product.sizes && product.sizes.length > 0 && (
               <div className="space-y-2">
                 <label className="text-sm font-medium text-foreground">Size</label>
-                <Select value={selectedSize} onValueChange={setSelectedSize}>
-                  <SelectTrigger className="w-full h-11">
-                    <SelectValue placeholder="Select size" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={product.size}>{product.size}</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="flex flex-wrap gap-2">
+                  {product.sizes.map((size) => (
+                    <button
+                      key={size}
+                      onClick={() => setSelectedSize(size)}
+                      className={`px-4 py-2 rounded-lg border text-sm font-medium transition-all ${
+                        selectedSize === size
+                          ? 'bg-gold text-gold-foreground border-gold'
+                          : 'bg-background border-border hover:border-gold/50 text-foreground'
+                      }`}
+                    >
+                      {size}
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
 

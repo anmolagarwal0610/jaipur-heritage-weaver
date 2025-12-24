@@ -8,6 +8,16 @@ import {
 import { db } from '@/lib/firebase';
 import { StoreSettings } from '@/lib/firebase-types';
 
+const DEFAULT_SIZE_OPTIONS = [
+  'Single',
+  'Double',
+  'Queen',
+  'King',
+  'Super King',
+  'Standard',
+  'Custom'
+];
+
 const defaultSettings = {
   storeName: 'Jaipur Touch',
   storeEmail: 'info@jaipurtouch.com',
@@ -20,6 +30,7 @@ const defaultSettings = {
   maxFeaturedProducts: 4,
   whatsappEnabled: true,
   whatsappNumber: '919887238849',
+  productSizeOptions: DEFAULT_SIZE_OPTIONS,
 };
 
 export function useStoreSettings() {

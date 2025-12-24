@@ -14,14 +14,19 @@ import {
   Home,
   Loader2,
   Save,
-  MessageCircle
+  MessageCircle,
+  Package,
+  Plus,
+  X
 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
 
 export default function SettingsPage() {
   const { settings, loading, updateSettings } = useStoreSettings();
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
+  const [newSizeInput, setNewSizeInput] = useState('');
   const [formData, setFormData] = useState({
     storeName: '',
     storeEmail: '',
@@ -32,6 +37,7 @@ export default function SettingsPage() {
     maxFeaturedProducts: 4,
     whatsappEnabled: true,
     whatsappNumber: '',
+    productSizeOptions: [] as string[],
   });
   const [initialized, setInitialized] = useState(false);
 
@@ -47,9 +53,27 @@ export default function SettingsPage() {
       maxFeaturedProducts: settings.maxFeaturedProducts || 4,
       whatsappEnabled: settings.whatsappEnabled !== false,
       whatsappNumber: settings.whatsappNumber || '',
+      productSizeOptions: settings.productSizeOptions || ['Single', 'Double', 'Queen', 'King', 'Super King', 'Standard', 'Custom'],
     });
     setInitialized(true);
   }
+
+  const handleAddSize = () => {
+    if (newSizeInput.trim() && !formData.productSizeOptions.includes(newSizeInput.trim())) {
+      setFormData(prev => ({
+        ...prev,
+        productSizeOptions: [...prev.productSizeOptions, newSizeInput.trim()]
+      }));
+      setNewSizeInput('');
+    }
+  };
+
+  const handleRemoveSize = (size: string) => {
+    setFormData(prev => ({
+      ...prev,
+      productSizeOptions: prev.productSizeOptions.filter(s => s !== size)
+    }));
+  };
 
   const handleChange = (field: string, value: string | number | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -187,6 +211,50 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
+        {/* Product Settings */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Package className="h-4 w-4" /> Product Settings
+            </CardTitle>
+            <CardDescription>
+              Configure product options available across your store
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-3">
+              <Label>Available Size Options</Label>
+              <p className="text-sm text-muted-foreground">
+                These sizes will be available when adding products
+              </p>
+              <div className="flex gap-2">
+                <Input
+                  value={newSizeInput}
+                  onChange={(e) => setNewSizeInput(e.target.value)}
+                  placeholder="Add new size"
+                  onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddSize())}
+                />
+                <Button type="button" variant="outline" onClick={handleAddSize}>
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {formData.productSizeOptions.map((size) => (
+                  <Badge key={size} variant="secondary" className="gap-1 py-1.5 px-3">
+                    {size}
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveSize(size)}
+                      className="ml-1 hover:text-destructive"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
         {/* Shipping Settings */}
         <Card>
           <CardHeader>
