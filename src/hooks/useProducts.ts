@@ -113,10 +113,14 @@ export function useProducts(options: UseProductsOptions = {}) {
     try {
       const slug = data.name?.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') || '';
       
+      // Get primary image from default images or first color variant
+      const primaryImageUrl = data.images?.[0]?.url || 
+        data.colorVariants?.[0]?.images?.[0]?.url || '';
+      
       const productData = {
         ...data,
         slug,
-        primaryImageUrl: data.images?.[0]?.url || '',
+        primaryImageUrl,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       };
@@ -173,6 +177,8 @@ export function useProducts(options: UseProductsOptions = {}) {
       // Update primary image if images changed
       if (data.images && data.images.length > 0) {
         updateData.primaryImageUrl = data.images[0].url;
+      } else if (data.colorVariants && data.colorVariants.length > 0 && data.colorVariants[0].images?.length > 0) {
+        updateData.primaryImageUrl = data.colorVariants[0].images[0].url;
       }
 
       await updateDoc(productRef, updateData);
