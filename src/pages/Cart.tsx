@@ -106,8 +106,10 @@ const Cart = () => {
                       {item.name}
                     </h3>
                   </Link>
-                  {item.size && (
-                    <p className="text-muted-foreground text-xs md:text-sm mt-0.5 md:mt-1">{item.size}</p>
+                  {(item.size || item.color) && (
+                    <p className="text-muted-foreground text-xs md:text-sm mt-0.5 md:mt-1">
+                      {[item.size, item.color].filter(Boolean).join(' / ')}
+                    </p>
                   )}
                   <p className="font-semibold text-foreground mt-1 md:mt-2 text-sm md:text-base">
                     ₹{item.price.toLocaleString()}

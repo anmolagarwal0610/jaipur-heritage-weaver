@@ -1,10 +1,10 @@
 /**
  * Product Detail Page - Etsy-inspired clean design
- * Features: Image gallery, product info, collapsible sections, related products
+ * Features: Image gallery, product info, size-based pricing, color variants
  * @module ProductDetail
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
 import SEO from "@/components/SEO";
@@ -15,19 +15,21 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Heart, Minus, Plus, ShoppingBag, MessageCircle, Check, Truck } from "lucide-react";
 import OptimizedImage from "@/components/ui/optimized-image";
 import { getOptimizedImageUrl } from "@/lib/image-utils";
 import { useProduct, useRelatedProducts } from "@/hooks/useProducts";
 import { useCart } from "@/contexts/CartContext";
+import { ProductSizeVariant, ProductColorVariant } from "@/lib/firebase-types";
+
+// Helper to get price range for related products
+const getProductPrice = (product: any): number => {
+  if (product.sizeVariants && product.sizeVariants.length > 0) {
+    return Math.min(...product.sizeVariants.map((sv: ProductSizeVariant) => sv.price));
+  }
+  return product.price || 0;
+};
 
 const ProductDetail = () => {
   const { productId } = useParams<{ productId: string }>();
@@ -37,72 +39,115 @@ const ProductDetail = () => {
   
   const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
-  const [selectedSize, setSelectedSize] = useState<string>("");
-  const [selectedColor, setSelectedColor] = useState<string | null>(null);
+  const [selectedSizeId, setSelectedSizeId] = useState<string>("");
+  const [selectedColorId, setSelectedColorId] = useState<string>("");
 
-  // Set default size and color when product loads
+  // Get size variants with fallback for legacy products
+  const sizeVariants = useMemo(() => {
+    if (product?.sizeVariants && product.sizeVariants.length > 0) {
+      return product.sizeVariants;
+    }
+    // Legacy fallback
+    if (product?.price) {
+      return [{
+        id: 'default',
+        sizeName: product.sizes?.[0] || 'Standard',
+        price: product.price,
+        compareAtPrice: product.compareAtPrice || null
+      }];
+    }
+    return [];
+  }, [product]);
+
+  // Get color variants with fallback
+  const colorVariants = useMemo(() => {
+    if (product?.colorVariants && product.colorVariants.length > 0) {
+      return product.colorVariants;
+    }
+    // Legacy fallback - create a default color from images
+    if (product?.images && product.images.length > 0) {
+      return [{
+        id: 'default',
+        colorName: product.color || 'Default',
+        colorHex: '#888888',
+        images: product.images,
+        sizeInventory: sizeVariants.map(sv => ({
+          sizeId: sv.id,
+          sizeName: sv.sizeName,
+          stockQuantity: product.stockQuantity || 10
+        }))
+      }];
+    }
+    return [];
+  }, [product, sizeVariants]);
+
+  // Set default selections when product loads
   useEffect(() => {
-    if (product?.sizes?.length > 0) {
-      setSelectedSize(product.sizes[0]);
+    if (sizeVariants.length > 0) {
+      setSelectedSizeId(sizeVariants[0].id);
     }
-    if (product?.colorVariants?.length > 0) {
-      setSelectedColor(product.colorVariants[0].colorName);
+    if (colorVariants.length > 0) {
+      setSelectedColorId(colorVariants[0].id);
     }
-  }, [product?.sizes, product?.colorVariants]);
+    setSelectedImage(0);
+    setQuantity(1);
+  }, [product?.id]);
+
+  // Get currently selected size and color
+  const selectedSize = sizeVariants.find(sv => sv.id === selectedSizeId);
+  const selectedColor = colorVariants.find(cv => cv.id === selectedColorId);
+  
+  // Get current price based on selected size
+  const currentPrice = selectedSize?.price || 0;
+  const currentComparePrice = selectedSize?.compareAtPrice || null;
+  const discount = currentComparePrice 
+    ? Math.round((1 - currentPrice / currentComparePrice) * 100) 
+    : 0;
+
+  // Get stock for current color+size combo
+  const getCurrentStock = (): number => {
+    if (!selectedColor || !selectedSize) return 0;
+    const inventory = selectedColor.sizeInventory?.find(
+      si => si.sizeName === selectedSize.sizeName
+    );
+    return inventory?.stockQuantity || 0;
+  };
+
+  const currentStock = getCurrentStock();
+  const isInStock = currentStock > 0;
+
+  // Get current images based on selected color
+  const getCurrentImages = () => {
+    if (selectedColor?.images?.length > 0) {
+      return selectedColor.images.sort((a, b) => a.order - b.order);
+    }
+    // Fallback to primary image
+    return [{ id: '1', url: product?.primaryImageUrl || '', alt: product?.name || '', order: 0, isPrimary: true }];
+  };
 
   const handleAddToCart = () => {
-    if (product) {
-      // Check stock before adding
-      if (quantity > product.stockQuantity) {
-        return;
-      }
-      // Get the correct image based on selected color
-      let displayImage = product.primaryImageUrl;
-      if (selectedColor && product.colorVariants?.length > 0) {
-        const colorVariant = product.colorVariants.find(c => c.colorName === selectedColor);
-        if (colorVariant?.images?.length > 0) {
-          displayImage = colorVariant.images[0].url;
-        }
-      }
+    if (product && selectedSize && selectedColor && isInStock) {
+      if (quantity > currentStock) return;
       
       addToCart({
         productId: product.id,
         name: product.name,
-        price: product.price,
-        image: displayImage,
-        size: selectedSize || null,
-        color: selectedColor,
+        price: currentPrice,
+        image: selectedColor.images?.[0]?.url || product.primaryImageUrl,
+        size: selectedSize.sizeName,
+        color: selectedColor.colorName,
         quantity,
-        stockQuantity: product.stockQuantity,
+        stockQuantity: currentStock,
       });
     }
   };
 
   const handleWhatsAppOrder = () => {
-    if (!product) return;
-    const sizeText = selectedSize ? ` (Size: ${selectedSize})` : '';
-    const colorText = selectedColor ? ` (Color: ${selectedColor})` : '';
-    const message = `Hi! I'd like to order:\n\n${product.name}${sizeText}${colorText}\nQuantity: ${quantity}\nPrice: ₹${(product.price * quantity).toLocaleString()}\n\nPlease confirm availability.`;
+    if (!product || !selectedSize) return;
+    const colorText = selectedColor ? ` (Color: ${selectedColor.colorName})` : '';
+    const message = `Hi! I'd like to order:\n\n${product.name} - ${selectedSize.sizeName}${colorText}\nQuantity: ${quantity}\nPrice: ₹${(currentPrice * quantity).toLocaleString()}\n\nPlease confirm availability.`;
     window.open(`https://wa.me/919887238849?text=${encodeURIComponent(message)}`, '_blank');
   };
-  
-  // Get current images based on selected color
-  const getCurrentImages = () => {
-    if (selectedColor && product?.colorVariants?.length > 0) {
-      const colorVariant = product.colorVariants.find(c => c.colorName === selectedColor);
-      if (colorVariant?.images?.length > 0) {
-        return colorVariant.images.sort((a, b) => a.order - b.order);
-      }
-    }
-    // Fallback to default images
-    return product?.images?.length > 0 
-      ? product.images.sort((a, b) => a.order - b.order) 
-      : [{ id: '1', url: product?.primaryImageUrl || '', alt: product?.name || '', order: 0, isPrimary: true }];
-  };
-
-  const discount = product?.compareAtPrice 
-    ? Math.round((1 - product.price / product.compareAtPrice) * 100) 
-    : 0;
 
   if (loading) {
     return (
@@ -251,15 +296,15 @@ const ProductDetail = () => {
 
           {/* Product Info */}
           <div className="lg:sticky lg:top-24 lg:self-start space-y-5">
-            {/* Price */}
+            {/* Price - based on selected size */}
             <div className="flex items-baseline gap-3 flex-wrap">
               <span className="text-2xl md:text-3xl font-semibold text-foreground">
-                ₹{product.price.toLocaleString()}
+                ₹{currentPrice.toLocaleString()}
               </span>
-              {product.compareAtPrice && product.compareAtPrice > product.price && (
+              {currentComparePrice && currentComparePrice > currentPrice && (
                 <>
                   <span className="text-lg text-muted-foreground line-through">
-                    ₹{product.compareAtPrice.toLocaleString()}
+                    ₹{currentComparePrice.toLocaleString()}
                   </span>
                   <span className="text-sm font-medium text-terracotta bg-terracotta/10 px-2 py-0.5 rounded">
                     {discount}% off
@@ -275,10 +320,10 @@ const ProductDetail = () => {
 
             {/* Stock Status */}
             <div className="flex items-center gap-4 text-sm">
-              {product.inStock ? (
+              {isInStock ? (
                 <span className="flex items-center gap-1.5 text-olive">
                   <Check className="w-4 h-4" />
-                  In Stock
+                  In Stock ({currentStock} available)
                 </span>
               ) : (
                 <span className="text-destructive">Out of Stock</span>
@@ -290,21 +335,21 @@ const ProductDetail = () => {
             </div>
 
             {/* Color Selector */}
-            {product.colorVariants && product.colorVariants.length > 0 && (
+            {colorVariants.length > 1 && (
               <div className="space-y-2">
                 <label className="text-sm font-medium text-foreground">
-                  Color: <span className="text-muted-foreground font-normal">{selectedColor}</span>
+                  Color: <span className="text-muted-foreground font-normal">{selectedColor?.colorName}</span>
                 </label>
                 <div className="flex flex-wrap gap-2">
-                  {product.colorVariants.map((variant) => (
+                  {colorVariants.map((variant) => (
                     <button
                       key={variant.id}
                       onClick={() => {
-                        setSelectedColor(variant.colorName);
+                        setSelectedColorId(variant.id);
                         setSelectedImage(0);
                       }}
                       className={`w-10 h-10 rounded-full border-2 transition-all ${
-                        selectedColor === variant.colorName
+                        selectedColorId === variant.id
                           ? 'border-gold ring-2 ring-gold/30 ring-offset-2'
                           : 'border-border hover:border-gold/50'
                       }`}
@@ -316,24 +361,41 @@ const ProductDetail = () => {
               </div>
             )}
 
-            {/* Size Selector */}
-            {product.sizes && product.sizes.length > 0 && (
+            {/* Size Selector with prices */}
+            {sizeVariants.length > 0 && (
               <div className="space-y-2">
                 <label className="text-sm font-medium text-foreground">Size</label>
                 <div className="flex flex-wrap gap-2">
-                  {product.sizes.map((size) => (
-                    <button
-                      key={size}
-                      onClick={() => setSelectedSize(size)}
-                      className={`px-4 py-2 rounded-lg border text-sm font-medium transition-all ${
-                        selectedSize === size
-                          ? 'bg-gold text-gold-foreground border-gold'
-                          : 'bg-background border-border hover:border-gold/50 text-foreground'
-                      }`}
-                    >
-                      {size}
-                    </button>
-                  ))}
+                  {sizeVariants.map((sv) => {
+                    // Check if this size is available in selected color
+                    const colorInv = selectedColor?.sizeInventory?.find(
+                      si => si.sizeName === sv.sizeName
+                    );
+                    const sizeStock = colorInv?.stockQuantity || 0;
+                    const isAvailable = sizeStock > 0;
+
+                    return (
+                      <button
+                        key={sv.id}
+                        onClick={() => isAvailable && setSelectedSizeId(sv.id)}
+                        disabled={!isAvailable}
+                        className={`px-4 py-2 rounded-lg border text-sm font-medium transition-all ${
+                          selectedSizeId === sv.id
+                            ? 'bg-gold text-gold-foreground border-gold'
+                            : isAvailable
+                              ? 'bg-background border-border hover:border-gold/50 text-foreground'
+                              : 'bg-muted border-border text-muted-foreground cursor-not-allowed line-through'
+                        }`}
+                      >
+                        {sv.sizeName}
+                        {sizeVariants.length > 1 && (
+                          <span className="block text-xs opacity-75">
+                            ₹{sv.price.toLocaleString()}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -357,13 +419,13 @@ const ProductDetail = () => {
                   size="icon"
                   className="h-10 w-10"
                   onClick={() => setQuantity(quantity + 1)}
-                  disabled={!product.inStock || quantity >= product.stockQuantity}
+                  disabled={!isInStock || quantity >= currentStock}
                 >
                   <Plus className="h-4 w-4" />
                 </Button>
               </div>
-              {product.stockQuantity <= 5 && product.stockQuantity > 0 && (
-                <p className="text-xs text-terracotta mt-1">Only {product.stockQuantity} left in stock</p>
+              {currentStock <= 5 && currentStock > 0 && (
+                <p className="text-xs text-terracotta mt-1">Only {currentStock} left in stock</p>
               )}
             </div>
 
@@ -380,7 +442,7 @@ const ProductDetail = () => {
               <Button
                 className="flex-1 h-12 bg-gold text-gold-foreground hover:bg-gold/90 text-base font-medium"
                 onClick={handleAddToCart}
-                disabled={!product.inStock}
+                disabled={!isInStock}
               >
                 <ShoppingBag className="h-5 w-5 mr-2" />
                 Add to Cart
@@ -408,17 +470,6 @@ const ProductDetail = () => {
                   )}
                   {product.material && (
                     <p><span className="text-foreground">Material:</span> {product.material}</p>
-                  )}
-                  {product.dimensions && (
-                    <p>
-                      <span className="text-foreground">Dimensions:</span>{' '}
-                      {product.dimensions.length && product.dimensions.width 
-                        ? `${product.dimensions.length} x ${product.dimensions.width} ${product.dimensions.unit}`
-                        : 'Standard'}
-                    </p>
-                  )}
-                  {product.color && (
-                    <p><span className="text-foreground">Color:</span> {product.color}</p>
                   )}
                   {product.pattern && (
                     <p><span className="text-foreground">Pattern:</span> {product.pattern}</p>
@@ -476,32 +527,38 @@ const ProductDetail = () => {
               You May Also Like
             </h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
-              {relatedProducts.map((relProduct) => (
-                <Link
-                  key={relProduct.id}
-                  to={`/product/${relProduct.id}`}
-                  className="group"
-                >
-                  <div className="relative aspect-[3/4] rounded-lg overflow-hidden bg-secondary mb-3">
-                    <OptimizedImage
-                      src={relProduct.primaryImageUrl}
-                      alt={relProduct.name}
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                    />
-                    {relProduct.badge && (
-                      <span className="absolute top-2 left-2 bg-terracotta text-terracotta-foreground text-[10px] font-medium px-2 py-0.5 rounded">
-                        {relProduct.badge}
-                      </span>
-                    )}
-                  </div>
-                  <h3 className="font-serif text-sm text-foreground group-hover:text-gold transition-colors line-clamp-2">
-                    {relProduct.name}
-                  </h3>
-                  <p className="font-semibold text-foreground mt-1">
-                    ₹{relProduct.price.toLocaleString()}
-                  </p>
-                </Link>
-              ))}
+              {relatedProducts.map((relProduct) => {
+                const minPrice = getProductPrice(relProduct);
+                return (
+                  <Link
+                    key={relProduct.id}
+                    to={`/product/${relProduct.id}`}
+                    className="group"
+                  >
+                    <div className="relative aspect-[3/4] rounded-lg overflow-hidden bg-secondary mb-3">
+                      <OptimizedImage
+                        src={relProduct.primaryImageUrl}
+                        alt={relProduct.name}
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      />
+                      {relProduct.badge && (
+                        <span className="absolute top-2 left-2 bg-terracotta text-terracotta-foreground text-[10px] font-medium px-2 py-0.5 rounded">
+                          {relProduct.badge}
+                        </span>
+                      )}
+                    </div>
+                    <h3 className="font-serif text-sm text-foreground group-hover:text-gold transition-colors line-clamp-2">
+                      {relProduct.name}
+                    </h3>
+                    <p className="font-semibold text-foreground mt-1">
+                      {relProduct.sizeVariants && relProduct.sizeVariants.length > 1 
+                        ? `From ₹${minPrice.toLocaleString()}`
+                        : `₹${minPrice.toLocaleString()}`
+                      }
+                    </p>
+                  </Link>
+                );
+              })}
             </div>
           </section>
         )}

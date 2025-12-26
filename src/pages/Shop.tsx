@@ -287,16 +287,18 @@ const Shop = () => {
                             e.preventDefault();
                             e.stopPropagation();
                             const firstColor = product.colorVariants?.[0];
-                            const firstSize = product.sizes?.[0] || null;
+                            const firstSize = product.sizeVariants?.[0];
+                            if (!firstSize || !firstColor) return;
+                            const sizeInv = firstColor.sizeInventory?.find(si => si.sizeName === firstSize.sizeName);
                             addToCart({
                               productId: product.id,
                               name: product.name,
-                              price: product.price,
+                              price: firstSize.price,
                               image: firstColor?.images?.[0]?.url || product.primaryImageUrl,
-                              size: firstSize,
+                              size: firstSize.sizeName,
                               color: firstColor?.colorName || null,
                               quantity: 1,
-                              stockQuantity: product.stockQuantity
+                              stockQuantity: sizeInv?.stockQuantity || product.stockQuantity || 10
                             });
                           }}
                           className="w-full bg-gold text-gold-foreground hover:bg-gold/90 text-xs md:text-sm h-8 md:h-10"
@@ -320,19 +322,17 @@ const Shop = () => {
                       {product.name}
                     </h3>
                     <div className="flex flex-wrap items-center gap-1 sm:gap-2 mt-1">
-                      <span className="font-semibold text-foreground text-sm md:text-base">
-                        ₹{product.price.toLocaleString()}
-                      </span>
-                      {product.compareAtPrice && product.compareAtPrice > product.price && (
-                        <>
-                          <span className="text-muted-foreground text-xs md:text-sm line-through">
-                            ₹{product.compareAtPrice.toLocaleString()}
+                      {(() => {
+                        const minPrice = product.sizeVariants?.length > 0 
+                          ? Math.min(...product.sizeVariants.map(sv => sv.price))
+                          : product.price || 0;
+                        const hasMultipleSizes = product.sizeVariants?.length > 1;
+                        return (
+                          <span className="font-semibold text-foreground text-sm md:text-base">
+                            {hasMultipleSizes ? `From ₹${minPrice.toLocaleString()}` : `₹${minPrice.toLocaleString()}`}
                           </span>
-                          <span className="text-terracotta text-[10px] md:text-sm font-medium">
-                            {Math.round((1 - product.price / product.compareAtPrice) * 100)}% off
-                          </span>
-                        </>
-                      )}
+                        );
+                      })()}
                     </div>
                   </Link>
                 ))}
