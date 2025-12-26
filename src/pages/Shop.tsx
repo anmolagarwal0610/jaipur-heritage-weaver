@@ -22,6 +22,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useCategories } from "@/hooks/useCategories";
 import { useProducts } from "@/hooks/useProducts";
 import { useSubCategories } from "@/hooks/useSubCategories";
+import { useCart } from "@/contexts/CartContext";
 
 const Shop = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -34,6 +35,7 @@ const Shop = () => {
   const { categories, loading: categoriesLoading } = useCategories();
   const { products, loading: productsLoading } = useProducts();
   const { subCategories, loading: subCategoriesLoading } = useSubCategories();
+  const { addToCart } = useCart();
 
   // Create a map of subcategory IDs to info for quick lookup
   const subCategoryMap = useMemo(() => {
@@ -281,7 +283,22 @@ const Shop = () => {
                       </button>
                       <div className="absolute bottom-0 left-0 right-0 p-2 md:p-3 translate-y-full group-hover:translate-y-0 transition-transform">
                         <Button 
-                          onClick={(e) => e.preventDefault()}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            const firstColor = product.colorVariants?.[0];
+                            const firstSize = product.sizes?.[0] || null;
+                            addToCart({
+                              productId: product.id,
+                              name: product.name,
+                              price: product.price,
+                              image: firstColor?.images?.[0]?.url || product.primaryImageUrl,
+                              size: firstSize,
+                              color: firstColor?.colorName || null,
+                              quantity: 1,
+                              stockQuantity: product.stockQuantity
+                            });
+                          }}
                           className="w-full bg-gold text-gold-foreground hover:bg-gold/90 text-xs md:text-sm h-8 md:h-10"
                         >
                           <ShoppingBag className="w-3.5 h-3.5 md:w-4 md:h-4 mr-1.5 md:mr-2" />
