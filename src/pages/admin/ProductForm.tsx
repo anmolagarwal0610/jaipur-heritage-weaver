@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useProducts } from '@/hooks/useProducts';
 import { useStoreSettings } from '@/hooks/useStoreSettings';
-import { Product, ProductImage, ProductColorVariant } from '@/lib/firebase-types';
+import { Product, ProductImage, ProductColorVariant, ProductSizeVariant, ColorSizeInventory } from '@/lib/firebase-types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -27,8 +27,9 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import ImageUpload from '@/components/admin/ImageUpload';
-import { Loader2, Plus, X, Image as ImageIcon, Palette, Trash2 } from 'lucide-react';
+import { Loader2, Plus, X, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 interface ProductFormProps {
   open: boolean;
@@ -49,54 +50,51 @@ const BADGE_OPTIONS = [
 ];
 
 const FABRIC_OPTIONS = [
-  'Cotton',
-  'Silk',
-  'Linen',
-  'Velvet',
-  'Polyester',
-  'Cotton Blend',
-  'Handloom Cotton',
-  'Mulmul',
-  'Chanderi',
-  'Khadi'
+  'Cotton', 'Silk', 'Linen', 'Velvet', 'Polyester', 'Cotton Blend',
+  'Handloom Cotton', 'Mulmul', 'Chanderi', 'Khadi'
 ];
 
 const PATTERN_OPTIONS = [
-  'Block Print',
-  'Floral',
-  'Geometric',
-  'Paisley',
-  'Stripes',
-  'Solid',
-  'Embroidered',
-  'Tie-Dye',
-  'Batik',
-  'Traditional'
+  'Block Print', 'Floral', 'Geometric', 'Paisley', 'Stripes',
+  'Solid', 'Embroidered', 'Tie-Dye', 'Batik', 'Traditional'
 ];
 
-const initialFormState = {
+interface FormState {
+  name: string;
+  description: string;
+  shortDescription: string;
+  sku: string;
+  inStock: boolean;
+  isFeatured: boolean;
+  featuredOrder: number | null;
+  fabric: string;
+  material: string;
+  pattern: string;
+  careInstructions: string;
+  tags: string[];
+  badge: 'new' | 'bestseller' | 'sale' | 'limited' | null;
+  isActive: boolean;
+  sizeVariants: ProductSizeVariant[];
+  colorVariants: ProductColorVariant[];
+}
+
+const initialFormState: FormState = {
   name: '',
   description: '',
   shortDescription: '',
-  price: 0,
-  compareAtPrice: null as number | null,
   sku: '',
   inStock: true,
-  stockQuantity: 10,
   isFeatured: false,
-  featuredOrder: null as number | null,
+  featuredOrder: null,
   fabric: '',
   material: '',
-  sizes: [] as string[],
-  dimensions: null as { length: number | null; width: number | null; height: number | null; unit: 'cm' | 'inch' } | null,
-  color: '',
   pattern: '',
   careInstructions: '',
-  tags: [] as string[],
-  badge: null as 'new' | 'bestseller' | 'sale' | 'limited' | null,
+  tags: [],
+  badge: null,
   isActive: true,
-  images: [] as ProductImage[],
-  colorVariants: [] as ProductColorVariant[]
+  sizeVariants: [],
+  colorVariants: []
 };
 
 export default function ProductForm({
@@ -111,68 +109,105 @@ export default function ProductForm({
   const { createProduct, updateProduct } = useProducts();
   const { settings } = useStoreSettings();
   const [saving, setSaving] = useState(false);
-  const [formData, setFormData] = useState(initialFormState);
+  const [formData, setFormData] = useState<FormState>(initialFormState);
   const [tagInput, setTagInput] = useState('');
   const [activeTab, setActiveTab] = useState('basic');
-  const [activeColorTab, setActiveColorTab] = useState<string | null>(null);
+  const [expandedColorId, setExpandedColorId] = useState<string | null>(null);
   const [newColorName, setNewColorName] = useState('');
   const [newColorHex, setNewColorHex] = useState('#4B5563');
 
   // Get size options from store settings
   const sizeOptions = settings?.productSizeOptions || [
-    'Single', 'Double', 'Queen', 'King', 'Super King', 'Standard', 'Custom'
+    'Single', 'Double', 'Queen', 'King', 'Super King', 'Standard'
   ];
 
   // Reset form when product changes
   useEffect(() => {
     if (product) {
+      // Migrate legacy data to new structure
+      let sizeVariants = product.sizeVariants || [];
+      let colorVariants = product.colorVariants || [];
+
+      // If no size variants but has legacy sizes/price, migrate
+      if (sizeVariants.length === 0 && product.sizes && product.sizes.length > 0) {
+        sizeVariants = product.sizes.map((size, idx) => ({
+          id: `size_${idx}`,
+          sizeName: size,
+          price: product.price || 0,
+          compareAtPrice: product.compareAtPrice || null
+        }));
+      } else if (sizeVariants.length === 0 && product.price) {
+        // No sizes but has price - create a default "Standard" size
+        sizeVariants = [{
+          id: 'size_default',
+          sizeName: 'Standard',
+          price: product.price,
+          compareAtPrice: product.compareAtPrice || null
+        }];
+      }
+
+      // Migrate legacy color variants without sizeInventory
+      colorVariants = colorVariants.map(cv => ({
+        ...cv,
+        sizeInventory: cv.sizeInventory || sizeVariants.map(sv => ({
+          sizeId: sv.id,
+          sizeName: sv.sizeName,
+          stockQuantity: product.stockQuantity || 10
+        }))
+      }));
+
       setFormData({
         name: product.name,
         description: product.description,
         shortDescription: product.shortDescription,
-        price: product.price,
-        compareAtPrice: product.compareAtPrice,
         sku: product.sku,
         inStock: product.inStock,
-        stockQuantity: product.stockQuantity,
         isFeatured: product.isFeatured,
         featuredOrder: product.featuredOrder,
         fabric: product.fabric || '',
         material: product.material || '',
-        sizes: product.sizes || [],
-        dimensions: product.dimensions,
-        color: product.color || '',
         pattern: product.pattern || '',
         careInstructions: product.careInstructions || '',
         tags: product.tags || [],
         badge: product.badge,
         isActive: product.isActive,
-        images: product.images || [],
-        colorVariants: product.colorVariants || []
+        sizeVariants,
+        colorVariants
       });
-      if (product.colorVariants?.length > 0) {
-        setActiveColorTab(product.colorVariants[0].id);
+      
+      if (colorVariants.length > 0) {
+        setExpandedColorId(colorVariants[0].id);
       }
     } else {
       setFormData(initialFormState);
-      setActiveColorTab(null);
+      setExpandedColorId(null);
     }
     setActiveTab('basic');
   }, [product, open]);
 
   const handleSave = async () => {
-    if (!formData.name.trim() || formData.price <= 0) return;
+    if (!formData.name.trim()) return;
+    if (formData.sizeVariants.length === 0) return;
+    if (formData.colorVariants.length === 0) return;
 
     setSaving(true);
     try {
+      // Get primary image from first color variant
+      const primaryImageUrl = formData.colorVariants[0]?.images?.[0]?.url || '';
+      
+      // Calculate total stock
+      const totalStock = formData.colorVariants.reduce((acc, cv) => {
+        return acc + cv.sizeInventory.reduce((sum, si) => sum + si.stockQuantity, 0);
+      }, 0);
+
       const productData = {
         ...formData,
         categoryId,
         categoryName,
         subCategoryId,
         subCategoryName,
-        primaryImageUrl: formData.images[0]?.url || 
-          (formData.colorVariants[0]?.images[0]?.url) || ''
+        primaryImageUrl,
+        inStock: totalStock > 0
       };
 
       if (product) {
@@ -189,72 +224,71 @@ export default function ProductForm({
     }
   };
 
+  // Tag handlers
   const handleAddTag = () => {
     if (tagInput.trim() && !formData.tags.includes(tagInput.trim())) {
-      setFormData({
-        ...formData,
-        tags: [...formData.tags, tagInput.trim()]
-      });
+      setFormData(prev => ({ ...prev, tags: [...prev.tags, tagInput.trim()] }));
       setTagInput('');
     }
   };
 
   const handleRemoveTag = (tag: string) => {
-    setFormData({
-      ...formData,
-      tags: formData.tags.filter((t) => t !== tag)
+    setFormData(prev => ({ ...prev, tags: prev.tags.filter(t => t !== tag) }));
+  };
+
+  // Size variant handlers
+  const handleSizeToggle = (sizeName: string) => {
+    setFormData(prev => {
+      const exists = prev.sizeVariants.find(sv => sv.sizeName === sizeName);
+      let newSizeVariants: ProductSizeVariant[];
+      
+      if (exists) {
+        // Remove size
+        newSizeVariants = prev.sizeVariants.filter(sv => sv.sizeName !== sizeName);
+      } else {
+        // Add size with default price
+        const newSize: ProductSizeVariant = {
+          id: `size_${Date.now()}`,
+          sizeName,
+          price: 0,
+          compareAtPrice: null
+        };
+        newSizeVariants = [...prev.sizeVariants, newSize];
+      }
+
+      // Update color variants to add/remove size inventory
+      const newColorVariants = prev.colorVariants.map(cv => {
+        if (exists) {
+          // Remove from sizeInventory
+          return {
+            ...cv,
+            sizeInventory: cv.sizeInventory.filter(si => si.sizeName !== sizeName)
+          };
+        } else {
+          // Add to sizeInventory
+          const newSizeInv: ColorSizeInventory = {
+            sizeId: `size_${Date.now()}`,
+            sizeName,
+            stockQuantity: 10
+          };
+          return {
+            ...cv,
+            sizeInventory: [...cv.sizeInventory, newSizeInv]
+          };
+        }
+      });
+
+      return { ...prev, sizeVariants: newSizeVariants, colorVariants: newColorVariants };
     });
   };
 
-  const handleSizeToggle = (size: string) => {
+  const handleSizePriceChange = (sizeName: string, field: 'price' | 'compareAtPrice', value: number | null) => {
     setFormData(prev => ({
       ...prev,
-      sizes: prev.sizes.includes(size)
-        ? prev.sizes.filter(s => s !== size)
-        : [...prev.sizes, size]
+      sizeVariants: prev.sizeVariants.map(sv => 
+        sv.sizeName === sizeName ? { ...sv, [field]: value } : sv
+      )
     }));
-  };
-
-  // Default images handlers
-  const handleImageUpload = (url: string) => {
-    const newImage: ProductImage = {
-      id: `img_${Date.now()}`,
-      url,
-      alt: formData.name || 'Product image',
-      order: formData.images.length,
-      isPrimary: formData.images.length === 0
-    };
-    setFormData({
-      ...formData,
-      images: [...formData.images, newImage]
-    });
-  };
-
-  const handleRemoveImage = (imageId: string) => {
-    const updatedImages = formData.images
-      .filter((img) => img.id !== imageId)
-      .map((img, index) => ({
-        ...img,
-        order: index,
-        isPrimary: index === 0
-      }));
-    setFormData({
-      ...formData,
-      images: updatedImages
-    });
-  };
-
-  const handleSetPrimaryImage = (imageId: string) => {
-    const updatedImages = formData.images.map((img) => ({
-      ...img,
-      isPrimary: img.id === imageId
-    }));
-    updatedImages.sort((a, b) => (b.isPrimary ? 1 : 0) - (a.isPrimary ? 1 : 0));
-    updatedImages.forEach((img, index) => (img.order = index));
-    setFormData({
-      ...formData,
-      images: updatedImages
-    });
   };
 
   // Color variant handlers
@@ -265,14 +299,19 @@ export default function ProductForm({
       id: `color_${Date.now()}`,
       colorName: newColorName.trim(),
       colorHex: newColorHex,
-      images: []
+      images: [],
+      sizeInventory: formData.sizeVariants.map(sv => ({
+        sizeId: sv.id,
+        sizeName: sv.sizeName,
+        stockQuantity: 10
+      }))
     };
     
     setFormData(prev => ({
       ...prev,
       colorVariants: [...prev.colorVariants, newVariant]
     }));
-    setActiveColorTab(newVariant.id);
+    setExpandedColorId(newVariant.id);
     setNewColorName('');
     setNewColorHex('#4B5563');
   };
@@ -282,8 +321,8 @@ export default function ProductForm({
       ...prev,
       colorVariants: prev.colorVariants.filter(v => v.id !== variantId)
     }));
-    if (activeColorTab === variantId) {
-      setActiveColorTab(formData.colorVariants.find(v => v.id !== variantId)?.id || null);
+    if (expandedColorId === variantId) {
+      setExpandedColorId(formData.colorVariants.find(v => v.id !== variantId)?.id || null);
     }
   };
 
@@ -299,10 +338,7 @@ export default function ProductForm({
             order: variant.images.length,
             isPrimary: variant.images.length === 0
           };
-          return {
-            ...variant,
-            images: [...variant.images, newImage]
-          };
+          return { ...variant, images: [...variant.images, newImage] };
         }
         return variant;
       })
@@ -316,17 +352,35 @@ export default function ProductForm({
         if (variant.id === variantId) {
           const updatedImages = variant.images
             .filter(img => img.id !== imageId)
-            .map((img, index) => ({
-              ...img,
-              order: index,
-              isPrimary: index === 0
-            }));
+            .map((img, index) => ({ ...img, order: index, isPrimary: index === 0 }));
           return { ...variant, images: updatedImages };
         }
         return variant;
       })
     }));
   };
+
+  const handleSizeInventoryChange = (colorId: string, sizeName: string, quantity: number) => {
+    setFormData(prev => ({
+      ...prev,
+      colorVariants: prev.colorVariants.map(cv => {
+        if (cv.id === colorId) {
+          return {
+            ...cv,
+            sizeInventory: cv.sizeInventory.map(si =>
+              si.sizeName === sizeName ? { ...si, stockQuantity: quantity } : si
+            )
+          };
+        }
+        return cv;
+      })
+    }));
+  };
+
+  const canSave = formData.name.trim() && 
+    formData.sizeVariants.length > 0 && 
+    formData.sizeVariants.every(sv => sv.price > 0) &&
+    formData.colorVariants.length > 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -343,10 +397,9 @@ export default function ProductForm({
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1">
           <TabsList className="w-full justify-start rounded-none border-b bg-transparent px-6">
             <TabsTrigger value="basic">Basic Info</TabsTrigger>
-            <TabsTrigger value="images">Images</TabsTrigger>
-            <TabsTrigger value="variants">Variants</TabsTrigger>
+            <TabsTrigger value="sizes">Variant Size</TabsTrigger>
+            <TabsTrigger value="colors">Variant Colour</TabsTrigger>
             <TabsTrigger value="details">Details</TabsTrigger>
-            <TabsTrigger value="inventory">Inventory</TabsTrigger>
           </TabsList>
 
           <ScrollArea className="h-[50vh] px-6">
@@ -357,7 +410,7 @@ export default function ProductForm({
                 <Input
                   id="name"
                   value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
                   placeholder="e.g., Block Print Cotton Bedsheet"
                 />
               </div>
@@ -367,7 +420,7 @@ export default function ProductForm({
                 <Input
                   id="shortDescription"
                   value={formData.shortDescription}
-                  onChange={(e) => setFormData({ ...formData, shortDescription: e.target.value })}
+                  onChange={(e) => setFormData(prev => ({ ...prev, shortDescription: e.target.value }))}
                   placeholder="Brief description for cards (max 100 chars)"
                   maxLength={100}
                 />
@@ -378,7 +431,7 @@ export default function ProductForm({
                 <Textarea
                   id="description"
                   value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                   placeholder="Detailed product description"
                   rows={4}
                 />
@@ -386,192 +439,139 @@ export default function ProductForm({
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="price">Price (₹) *</Label>
+                  <Label htmlFor="sku">SKU</Label>
                   <Input
-                    id="price"
-                    type="number"
-                    min={0}
-                    value={formData.price}
-                    onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })}
+                    id="sku"
+                    value={formData.sku}
+                    onChange={(e) => setFormData(prev => ({ ...prev, sku: e.target.value }))}
+                    placeholder="Stock keeping unit (e.g., BS-001)"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="compareAtPrice">Compare at Price (₹)</Label>
-                  <Input
-                    id="compareAtPrice"
-                    type="number"
-                    min={0}
-                    value={formData.compareAtPrice || ''}
-                    onChange={(e) => setFormData({ 
-                      ...formData, 
-                      compareAtPrice: e.target.value ? parseFloat(e.target.value) : null 
-                    })}
-                    placeholder="Original price (for discounts)"
-                  />
+                  <Label>Badge</Label>
+                  <Select
+                    value={formData.badge || 'none'}
+                    onValueChange={(value) => setFormData(prev => ({ 
+                      ...prev, 
+                      badge: value === 'none' ? null : value as any 
+                    }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {BADGE_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="sku">SKU</Label>
-                <Input
-                  id="sku"
-                  value={formData.sku}
-                  onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
-                  placeholder="Stock keeping unit (e.g., BS-001)"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Badge</Label>
-                <Select
-                  value={formData.badge || 'none'}
-                  onValueChange={(value) => setFormData({ 
-                    ...formData, 
-                    badge: value === 'none' ? null : value as any 
-                  })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {BADGE_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
               </div>
             </TabsContent>
 
-            {/* Images Tab - Default Images */}
-            <TabsContent value="images" className="space-y-4 py-4 mt-0">
-              <div className="space-y-4">
+            {/* Variant Size Tab */}
+            <TabsContent value="sizes" className="space-y-6 py-4 mt-0">
+              <div className="space-y-3">
                 <div>
-                  <Label>Default Product Images</Label>
+                  <Label>Select Available Sizes *</Label>
                   <p className="text-sm text-muted-foreground">
-                    These images will be shown when no color is selected. If you add color variants, each color can have its own images.
+                    Choose sizes and set individual prices for each
                   </p>
                 </div>
-
-                <div className="grid grid-cols-3 gap-4">
-                  {formData.images.map((image) => (
-                    <div
-                      key={image.id}
-                      className={cn(
-                        'relative aspect-square rounded-lg overflow-hidden border-2',
-                        image.isPrimary ? 'border-primary' : 'border-border'
-                      )}
-                    >
-                      <img
-                        src={image.url}
-                        alt={image.alt}
-                        className="w-full h-full object-cover"
-                      />
-                      {image.isPrimary && (
-                        <Badge className="absolute top-2 left-2 text-xs">Primary</Badge>
-                      )}
-                      <div className="absolute top-2 right-2 flex gap-1">
-                        {!image.isPrimary && (
-                          <Button
-                            type="button"
-                            variant="secondary"
-                            size="icon"
-                            className="h-7 w-7"
-                            onClick={() => handleSetPrimaryImage(image.id)}
-                            title="Set as primary"
-                          >
-                            <ImageIcon className="h-3 w-3" />
-                          </Button>
+                
+                <div className="flex flex-wrap gap-2">
+                  {sizeOptions.map((size) => {
+                    const isSelected = formData.sizeVariants.some(sv => sv.sizeName === size);
+                    return (
+                      <label
+                        key={size}
+                        className={cn(
+                          "flex items-center gap-2 px-4 py-2 rounded-lg border cursor-pointer transition-all",
+                          isSelected
+                            ? "bg-gold/10 border-gold text-gold"
+                            : "bg-background border-border hover:border-gold/50"
                         )}
-                        <Button
-                          type="button"
-                          variant="destructive"
-                          size="icon"
-                          className="h-7 w-7"
-                          onClick={() => handleRemoveImage(image.id)}
-                        >
-                          <X className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-
-                  <ImageUpload
-                    storagePath={`products/${product?.id || 'new'}`}
-                    onUploadComplete={handleImageUpload}
-                    aspectRatio="square"
-                  />
+                      >
+                        <Checkbox
+                          checked={isSelected}
+                          onCheckedChange={() => handleSizeToggle(size)}
+                          className="sr-only"
+                        />
+                        <span className="text-sm font-medium">{size}</span>
+                      </label>
+                    );
+                  })}
                 </div>
               </div>
-            </TabsContent>
 
-            {/* Variants Tab - Sizes and Colors */}
-            <TabsContent value="variants" className="space-y-6 py-4 mt-0">
-              {/* Sizes Section */}
-              <div className="space-y-3">
-                <Label>Available Sizes</Label>
-                <p className="text-sm text-muted-foreground">
-                  Select all sizes this product is available in
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {sizeOptions.map((size) => (
-                    <label
-                      key={size}
-                      className={cn(
-                        "flex items-center gap-2 px-4 py-2 rounded-lg border cursor-pointer transition-all",
-                        formData.sizes.includes(size)
-                          ? "bg-gold/10 border-gold text-gold"
-                          : "bg-background border-border hover:border-gold/50"
-                      )}
-                    >
-                      <Checkbox
-                        checked={formData.sizes.includes(size)}
-                        onCheckedChange={() => handleSizeToggle(size)}
-                        className="sr-only"
-                      />
-                      <span className="text-sm font-medium">{size}</span>
-                    </label>
-                  ))}
-                </div>
-                {formData.sizes.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5 mt-2">
-                    <span className="text-xs text-muted-foreground">Selected:</span>
-                    {formData.sizes.map((size) => (
-                      <Badge key={size} variant="secondary" className="text-xs">
-                        {size}
-                      </Badge>
+              {formData.sizeVariants.length > 0 && (
+                <div className="space-y-4 border-t pt-4">
+                  <Label>Size Pricing *</Label>
+                  <div className="space-y-3">
+                    {formData.sizeVariants.map((sv) => (
+                      <div key={sv.id} className="flex items-center gap-4 p-4 bg-secondary/30 rounded-lg">
+                        <div className="w-24 font-medium text-foreground">{sv.sizeName}</div>
+                        <div className="flex-1 grid grid-cols-2 gap-3">
+                          <div className="space-y-1">
+                            <Label className="text-xs text-muted-foreground">Price (₹) *</Label>
+                            <Input
+                              type="number"
+                              min={0}
+                              value={sv.price || ''}
+                              onChange={(e) => handleSizePriceChange(sv.sizeName, 'price', parseFloat(e.target.value) || 0)}
+                              placeholder="Price"
+                              className="h-9"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs text-muted-foreground">Compare at (₹)</Label>
+                            <Input
+                              type="number"
+                              min={0}
+                              value={sv.compareAtPrice || ''}
+                              onChange={(e) => handleSizePriceChange(sv.sizeName, 'compareAtPrice', e.target.value ? parseFloat(e.target.value) : null)}
+                              placeholder="Original price"
+                              className="h-9"
+                            />
+                          </div>
+                        </div>
+                      </div>
                     ))}
                   </div>
-                )}
-              </div>
-
-              {/* Color Variants Section */}
-              <div className="space-y-3 border-t pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label>Color Variants</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Add different color options with separate images for each
-                    </p>
-                  </div>
                 </div>
+              )}
 
-                {/* Add New Color */}
-                <div className="flex gap-2 items-end p-4 bg-secondary/30 rounded-lg">
-                  <div className="flex-1 space-y-1.5">
-                    <Label htmlFor="newColorName" className="text-xs">Color Name</Label>
-                    <Input
-                      id="newColorName"
-                      value={newColorName}
-                      onChange={(e) => setNewColorName(e.target.value)}
-                      placeholder="e.g., Indigo Blue"
-                      className="h-9"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="newColorHex" className="text-xs">Color</Label>
-                    <div className="flex items-center gap-2">
+              {formData.sizeVariants.length === 0 && (
+                <div className="text-center py-8 text-muted-foreground border border-dashed rounded-lg">
+                  Select at least one size to continue
+                </div>
+              )}
+            </TabsContent>
+
+            {/* Variant Colour Tab */}
+            <TabsContent value="colors" className="space-y-6 py-4 mt-0">
+              {formData.sizeVariants.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground border border-dashed rounded-lg">
+                  Please add sizes in "Variant Size" tab first
+                </div>
+              ) : (
+                <>
+                  {/* Add New Color */}
+                  <div className="flex gap-2 items-end p-4 bg-secondary/30 rounded-lg">
+                    <div className="flex-1 space-y-1.5">
+                      <Label htmlFor="newColorName" className="text-xs">Colour Name *</Label>
+                      <Input
+                        id="newColorName"
+                        value={newColorName}
+                        onChange={(e) => setNewColorName(e.target.value)}
+                        placeholder="e.g., Indigo Blue"
+                        className="h-9"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="newColorHex" className="text-xs">Colour</Label>
                       <input
                         id="newColorHex"
                         type="color"
@@ -580,123 +580,141 @@ export default function ProductForm({
                         className="w-9 h-9 rounded cursor-pointer border border-border"
                       />
                     </div>
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={handleAddColorVariant}
+                      disabled={!newColorName.trim()}
+                      className="h-9"
+                    >
+                      <Plus className="h-4 w-4 mr-1" />
+                      Add Colour
+                    </Button>
                   </div>
-                  <Button
-                    type="button"
-                    size="sm"
-                    onClick={handleAddColorVariant}
-                    disabled={!newColorName.trim()}
-                    className="h-9"
-                  >
-                    <Plus className="h-4 w-4 mr-1" />
-                    Add
-                  </Button>
-                </div>
 
-                {/* Color Variant List */}
-                {formData.colorVariants.length > 0 && (
-                  <div className="space-y-4">
-                    {/* Color Tabs */}
-                    <div className="flex flex-wrap gap-2">
-                      {formData.colorVariants.map((variant) => (
-                        <button
+                  {/* Color Variant List */}
+                  {formData.colorVariants.length > 0 ? (
+                    <div className="space-y-3">
+                      {formData.colorVariants.map((variant, index) => (
+                        <Collapsible
                           key={variant.id}
-                          onClick={() => setActiveColorTab(variant.id)}
-                          className={cn(
-                            "flex items-center gap-2 px-3 py-2 rounded-lg border transition-all",
-                            activeColorTab === variant.id
-                              ? "bg-gold/10 border-gold"
-                              : "bg-background border-border hover:border-gold/50"
-                          )}
+                          open={expandedColorId === variant.id}
+                          onOpenChange={(open) => setExpandedColorId(open ? variant.id : null)}
                         >
-                          <div
-                            className="w-5 h-5 rounded-full border border-border"
-                            style={{ backgroundColor: variant.colorHex }}
-                          />
-                          <span className="text-sm font-medium">{variant.colorName}</span>
-                          <span className="text-xs text-muted-foreground">
-                            ({variant.images.length} imgs)
-                          </span>
-                        </button>
-                      ))}
-                    </div>
-
-                    {/* Active Color Images */}
-                    {activeColorTab && (
-                      <div className="p-4 border border-border rounded-lg space-y-4">
-                        {(() => {
-                          const variant = formData.colorVariants.find(v => v.id === activeColorTab);
-                          if (!variant) return null;
-
-                          return (
-                            <>
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
+                          <div className="border border-border rounded-lg overflow-hidden">
+                            <CollapsibleTrigger asChild>
+                              <button className="w-full flex items-center justify-between p-4 hover:bg-secondary/30 transition-colors">
+                                <div className="flex items-center gap-3">
                                   <div
-                                    className="w-6 h-6 rounded-full border"
+                                    className="w-6 h-6 rounded-full border border-border"
                                     style={{ backgroundColor: variant.colorHex }}
                                   />
                                   <span className="font-medium">{variant.colorName}</span>
+                                  {index === 0 && (
+                                    <Badge variant="secondary" className="text-xs">Base Variant</Badge>
+                                  )}
+                                  <span className="text-xs text-muted-foreground">
+                                    {variant.images.length} images
+                                  </span>
                                 </div>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleRemoveColorVariant(variant.id)}
-                                  className="text-destructive hover:text-destructive"
-                                >
-                                  <Trash2 className="h-4 w-4 mr-1" />
-                                  Remove
-                                </Button>
-                              </div>
-
-                              <div className="grid grid-cols-3 gap-3">
-                                {variant.images.map((image) => (
-                                  <div
-                                    key={image.id}
-                                    className="relative aspect-square rounded-lg overflow-hidden border border-border"
+                                <div className="flex items-center gap-2">
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleRemoveColorVariant(variant.id);
+                                    }}
+                                    className="text-destructive hover:text-destructive h-8"
                                   >
-                                    <img
-                                      src={image.url}
-                                      alt={image.alt}
-                                      className="w-full h-full object-cover"
-                                    />
-                                    <Button
-                                      type="button"
-                                      variant="destructive"
-                                      size="icon"
-                                      className="absolute top-2 right-2 h-6 w-6"
-                                      onClick={() => handleRemoveColorVariantImage(variant.id, image.id)}
-                                    >
-                                      <X className="h-3 w-3" />
-                                    </Button>
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                  {expandedColorId === variant.id ? (
+                                    <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                                  ) : (
+                                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                                  )}
+                                </div>
+                              </button>
+                            </CollapsibleTrigger>
+                            
+                            <CollapsibleContent>
+                              <div className="px-4 pb-4 space-y-4 border-t">
+                                {/* Size Inventory */}
+                                <div className="pt-4 space-y-3">
+                                  <Label className="text-sm">Stock per Size</Label>
+                                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                    {variant.sizeInventory.map((si) => (
+                                      <div key={si.sizeName} className="flex items-center gap-2 p-2 bg-secondary/30 rounded-lg">
+                                        <span className="text-sm font-medium min-w-16">{si.sizeName}</span>
+                                        <Input
+                                          type="number"
+                                          min={0}
+                                          value={si.stockQuantity}
+                                          onChange={(e) => handleSizeInventoryChange(variant.id, si.sizeName, parseInt(e.target.value) || 0)}
+                                          className="h-8 w-20"
+                                        />
+                                      </div>
+                                    ))}
                                   </div>
-                                ))}
+                                </div>
 
-                                <ImageUpload
-                                  storagePath={`products/${product?.id || 'new'}/colors/${variant.id}`}
-                                  onUploadComplete={(url) => handleColorVariantImageUpload(variant.id, url)}
-                                  aspectRatio="square"
-                                />
+                                {/* Images */}
+                                <div className="space-y-3">
+                                  <Label className="text-sm">Images</Label>
+                                  <div className="grid grid-cols-3 gap-3">
+                                    {variant.images.map((image) => (
+                                      <div
+                                        key={image.id}
+                                        className="relative aspect-square rounded-lg overflow-hidden border border-border"
+                                      >
+                                        <img
+                                          src={image.url}
+                                          alt={image.alt}
+                                          className="w-full h-full object-cover"
+                                        />
+                                        <Button
+                                          type="button"
+                                          variant="destructive"
+                                          size="icon"
+                                          className="absolute top-2 right-2 h-6 w-6"
+                                          onClick={() => handleRemoveColorVariantImage(variant.id, image.id)}
+                                        >
+                                          <X className="h-3 w-3" />
+                                        </Button>
+                                      </div>
+                                    ))}
+                                    <ImageUpload
+                                      storagePath={`products/${product?.id || 'new'}/colors/${variant.id}`}
+                                      onUploadComplete={(url) => handleColorVariantImageUpload(variant.id, url)}
+                                      aspectRatio="square"
+                                    />
+                                  </div>
+                                </div>
                               </div>
-                            </>
-                          );
-                        })()}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
+                            </CollapsibleContent>
+                          </div>
+                        </Collapsible>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground border border-dashed rounded-lg">
+                      Add at least one colour variant
+                    </div>
+                  )}
+                </>
+              )}
             </TabsContent>
 
-            {/* Details Tab (Home Decor Attributes) */}
+            {/* Details Tab */}
             <TabsContent value="details" className="space-y-4 py-4 mt-0">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Fabric</Label>
                   <Select
                     value={formData.fabric}
-                    onValueChange={(value) => setFormData({ ...formData, fabric: value })}
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, fabric: value }))}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select fabric" />
@@ -712,35 +730,10 @@ export default function ProductForm({
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="material">Material Details</Label>
-                  <Input
-                    id="material"
-                    value={formData.material}
-                    onChange={(e) => setFormData({ ...formData, material: e.target.value })}
-                    placeholder="e.g., 300 TC, 180 GSM"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="color">Primary Color (Legacy)</Label>
-                  <Input
-                    id="color"
-                    value={formData.color}
-                    onChange={(e) => setFormData({ ...formData, color: e.target.value })}
-                    placeholder="e.g., Indigo Blue"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Use Color Variants tab for multiple colors
-                  </p>
-                </div>
-
-                <div className="space-y-2">
                   <Label>Pattern</Label>
                   <Select
                     value={formData.pattern}
-                    onValueChange={(value) => setFormData({ ...formData, pattern: value })}
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, pattern: value }))}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select pattern" />
@@ -757,63 +750,13 @@ export default function ProductForm({
               </div>
 
               <div className="space-y-2">
-                <Label>Dimensions</Label>
-                <div className="grid grid-cols-4 gap-2">
-                  <Input
-                    type="number"
-                    placeholder="Length"
-                    value={formData.dimensions?.length || ''}
-                    onChange={(e) => setFormData({
-                      ...formData,
-                      dimensions: {
-                        ...(formData.dimensions || { length: null, width: null, height: null, unit: 'cm' }),
-                        length: e.target.value ? parseFloat(e.target.value) : null
-                      }
-                    })}
-                  />
-                  <Input
-                    type="number"
-                    placeholder="Width"
-                    value={formData.dimensions?.width || ''}
-                    onChange={(e) => setFormData({
-                      ...formData,
-                      dimensions: {
-                        ...(formData.dimensions || { length: null, width: null, height: null, unit: 'cm' }),
-                        width: e.target.value ? parseFloat(e.target.value) : null
-                      }
-                    })}
-                  />
-                  <Input
-                    type="number"
-                    placeholder="Height"
-                    value={formData.dimensions?.height || ''}
-                    onChange={(e) => setFormData({
-                      ...formData,
-                      dimensions: {
-                        ...(formData.dimensions || { length: null, width: null, height: null, unit: 'cm' }),
-                        height: e.target.value ? parseFloat(e.target.value) : null
-                      }
-                    })}
-                  />
-                  <Select
-                    value={formData.dimensions?.unit || 'cm'}
-                    onValueChange={(value) => setFormData({
-                      ...formData,
-                      dimensions: {
-                        ...(formData.dimensions || { length: null, width: null, height: null, unit: 'cm' }),
-                        unit: value as 'cm' | 'inch'
-                      }
-                    })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="cm">cm</SelectItem>
-                      <SelectItem value="inch">inch</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                <Label htmlFor="material">Material Details</Label>
+                <Input
+                  id="material"
+                  value={formData.material}
+                  onChange={(e) => setFormData(prev => ({ ...prev, material: e.target.value }))}
+                  placeholder="e.g., 300 TC, 180 GSM"
+                />
               </div>
 
               <div className="space-y-2">
@@ -821,7 +764,7 @@ export default function ProductForm({
                 <Textarea
                   id="careInstructions"
                   value={formData.careInstructions}
-                  onChange={(e) => setFormData({ ...formData, careInstructions: e.target.value })}
+                  onChange={(e) => setFormData(prev => ({ ...prev, careInstructions: e.target.value }))}
                   placeholder="e.g., Machine wash cold, tumble dry low"
                   rows={3}
                 />
@@ -857,36 +800,9 @@ export default function ProductForm({
                   </div>
                 )}
               </div>
-            </TabsContent>
 
-            {/* Inventory Tab */}
-            <TabsContent value="inventory" className="space-y-4 py-4 mt-0">
-              <div className="flex items-center justify-between p-4 rounded-lg border border-border">
-                <div className="space-y-0.5">
-                  <Label>In Stock</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Is this product available for purchase?
-                  </p>
-                </div>
-                <Switch
-                  checked={formData.inStock}
-                  onCheckedChange={(checked) => setFormData({ ...formData, inStock: checked })}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="stockQuantity">Stock Quantity</Label>
-                <Input
-                  id="stockQuantity"
-                  type="number"
-                  min={0}
-                  value={formData.stockQuantity}
-                  onChange={(e) => setFormData({ ...formData, stockQuantity: parseInt(e.target.value) || 0 })}
-                  className="w-32"
-                />
-              </div>
-
-              <div className="flex items-center justify-between p-4 rounded-lg border border-border">
+              {/* Active Switch moved here */}
+              <div className="flex items-center justify-between p-4 rounded-lg border border-border mt-6">
                 <div className="space-y-0.5">
                   <Label>Active</Label>
                   <p className="text-sm text-muted-foreground">
@@ -895,7 +811,7 @@ export default function ProductForm({
                 </div>
                 <Switch
                   checked={formData.isActive}
-                  onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked })}
+                  onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isActive: checked }))}
                 />
               </div>
             </TabsContent>
@@ -906,7 +822,7 @@ export default function ProductForm({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={handleSave} disabled={saving || !formData.name.trim() || formData.price <= 0}>
+          <Button onClick={handleSave} disabled={saving || !canSave}>
             {saving ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

@@ -90,12 +90,28 @@ export interface SubCategory {
   updatedAt: Timestamp;
 }
 
-// Product color variant with its own images
+// Size variant with its own pricing
+export interface ProductSizeVariant {
+  id: string;
+  sizeName: string;      // e.g., "King", "Queen"
+  price: number;
+  compareAtPrice: number | null;
+}
+
+// Color variant size inventory
+export interface ColorSizeInventory {
+  sizeId: string;
+  sizeName: string;
+  stockQuantity: number;
+}
+
+// Product color variant with its own images and per-size inventory
 export interface ProductColorVariant {
   id: string;
-  colorName: string;
-  colorHex: string; // Hex code for the swatch
+  colorName: string;       // Free text, e.g., "Indigo Blue"
+  colorHex: string;        // Hex code for the swatch
   images: ProductImage[];
+  sizeInventory: ColorSizeInventory[]; // Stock per size for this color
 }
 
 // Product document with home decor specific fields
@@ -105,10 +121,6 @@ export interface Product {
   description: string;
   shortDescription: string; // For card displays
   
-  // Pricing
-  price: number;
-  compareAtPrice: number | null; // Original price for showing discount
-  
   // Category
   categoryId: string;
   categoryName: string; // Denormalized for display
@@ -117,17 +129,32 @@ export interface Product {
   subCategoryId: string | null;
   subCategoryName: string | null;
   
-  // Images (default/no-color images)
-  images: ProductImage[];
-  primaryImageUrl: string; // Main display image
+  // Images (primary image for display)
+  primaryImageUrl: string; // Main display image (from first color variant)
   
-  // Color Variants (each has its own images)
+  // Size Variants (defines pricing per size)
+  sizeVariants: ProductSizeVariant[];
+  
+  // Color Variants (each has its own images + size inventory)
   colorVariants: ProductColorVariant[];
+  
+  // Legacy fields for backward compatibility (will be removed)
+  images?: ProductImage[];
+  price?: number; // Deprecated: use sizeVariants
+  compareAtPrice?: number | null; // Deprecated: use sizeVariants
+  sizes?: string[]; // Deprecated: use sizeVariants
+  stockQuantity?: number; // Deprecated: use colorVariants.sizeInventory
+  color?: string | null; // Deprecated: use colorVariants
+  dimensions?: {
+    length: number | null;
+    width: number | null;
+    height: number | null;
+    unit: 'cm' | 'inch';
+  } | null; // Deprecated
   
   // Inventory
   sku: string;
   inStock: boolean;
-  stockQuantity: number;
   
   // Featured product settings
   isFeatured: boolean;
@@ -136,14 +163,6 @@ export interface Product {
   // Home decor specific attributes
   fabric: string | null; // Cotton, Silk, Linen, etc.
   material: string | null; // Thread count, GSM, etc.
-  sizes: string[]; // Multiple sizes: King, Queen, Standard, etc.
-  dimensions: {
-    length: number | null;
-    width: number | null;
-    height: number | null;
-    unit: 'cm' | 'inch';
-  } | null;
-  color: string | null; // Legacy single color field
   pattern: string | null; // Block print, Floral, Geometric, etc.
   careInstructions: string | null;
   
