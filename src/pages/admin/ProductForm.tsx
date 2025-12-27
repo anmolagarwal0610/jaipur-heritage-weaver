@@ -115,6 +115,8 @@ export default function ProductForm({
   const [expandedColorId, setExpandedColorId] = useState<string | null>(null);
   const [newColorName, setNewColorName] = useState('');
   const [newColorHex, setNewColorHex] = useState('#4B5563');
+  // Generate stable temp ID for new products to ensure unique upload paths
+  const [tempProductId] = useState(() => `temp_${Date.now()}`);
 
   // Get size options from store settings
   const sizeOptions = settings?.productSizeOptions || [
@@ -686,7 +688,7 @@ export default function ProductForm({
                                       </div>
                                     ))}
                                     <ImageUpload
-                                      storagePath={`products/${product?.id || 'new'}/colors/${variant.id}`}
+                                      storagePath={`products/${product?.id || tempProductId}/colors/${variant.id}`}
                                       onUploadComplete={(url) => handleColorVariantImageUpload(variant.id, url)}
                                       aspectRatio="square"
                                     />

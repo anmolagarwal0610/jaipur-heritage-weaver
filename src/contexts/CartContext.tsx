@@ -25,8 +25,8 @@ interface CartState {
 interface CartContextType {
   items: CartItem[];
   addToCart: (item: CartItem) => void;
-  removeFromCart: (productId: string, size: string | null) => void;
-  updateQuantity: (productId: string, size: string | null, quantity: number) => void;
+  removeFromCart: (productId: string, size: string | null, color: string | null) => void;
+  updateQuantity: (productId: string, size: string | null, quantity: number, color: string | null) => void;
   clearCart: () => void;
   getItemCount: () => number;
   getSubtotal: () => number;
@@ -108,17 +108,19 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     });
   }, []);
 
-  const removeFromCart = useCallback((productId: string, size: string | null, color: string | null = null) => {
+  const removeFromCart = useCallback((productId: string, size: string | null, color: string | null) => {
     setItems(prevItems => {
       const filtered = prevItems.filter(
         i => !(i.productId === productId && i.size === size && i.color === color)
       );
-      toast.success('Removed from cart');
+      if (filtered.length < prevItems.length) {
+        toast.success('Removed from cart');
+      }
       return filtered;
     });
   }, []);
 
-  const updateQuantity = useCallback((productId: string, size: string | null, quantity: number, color: string | null = null) => {
+  const updateQuantity = useCallback((productId: string, size: string | null, quantity: number, color: string | null) => {
     if (quantity < 1) return;
     
     setItems(prevItems => {
