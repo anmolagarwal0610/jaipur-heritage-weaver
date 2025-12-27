@@ -88,7 +88,7 @@ const Cart = () => {
           <div className="lg:col-span-2 space-y-3 md:space-y-4">
             {items.map((item) => (
               <div
-                key={`${item.productId}-${item.size}`}
+                key={`${item.productId}-${item.size}-${item.color}`}
                 className="flex gap-3 md:gap-4 p-3 md:p-4 bg-card border border-border rounded-lg md:rounded-xl"
               >
                 <div className="w-20 h-20 sm:w-24 sm:h-24 md:w-32 md:h-32 rounded-md md:rounded-lg overflow-hidden bg-secondary shrink-0">
@@ -114,14 +114,14 @@ const Cart = () => {
                   <p className="font-semibold text-foreground mt-1 md:mt-2 text-sm md:text-base">
                     ₹{item.price.toLocaleString()}
                   </p>
-                  <div className="flex items-center justify-between mt-2 md:mt-4">
+                <div className="flex items-center justify-between mt-2 md:mt-4">
                     <div className="flex items-center gap-1 md:gap-2">
                       <Button 
                         variant="outline" 
                         size="icon" 
                         className="h-8 w-8 md:h-9 md:w-9" 
                         aria-label="Decrease quantity"
-                        onClick={() => updateQuantity(item.productId, item.size, item.quantity - 1)}
+                        onClick={() => updateQuantity(item.productId, item.size, item.quantity - 1, item.color)}
                         disabled={item.quantity <= 1}
                       >
                         <Minus className="h-3 w-3" />
@@ -132,7 +132,7 @@ const Cart = () => {
                         size="icon" 
                         className="h-8 w-8 md:h-9 md:w-9" 
                         aria-label="Increase quantity"
-                        onClick={() => updateQuantity(item.productId, item.size, item.quantity + 1)}
+                        onClick={() => updateQuantity(item.productId, item.size, item.quantity + 1, item.color)}
                       >
                         <Plus className="h-3 w-3" />
                       </Button>
@@ -142,7 +142,7 @@ const Cart = () => {
                       size="icon" 
                       className="text-destructive hover:text-destructive h-9 w-9" 
                       aria-label="Remove item"
-                      onClick={() => removeFromCart(item.productId, item.size)}
+                      onClick={() => removeFromCart(item.productId, item.size, item.color)}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
