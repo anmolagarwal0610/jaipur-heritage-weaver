@@ -26,8 +26,8 @@ import {
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import ImageUpload from '@/components/admin/ImageUpload';
-import { Loader2, Plus, X, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
+import MultiImageUpload from '@/components/admin/MultiImageUpload';
+import { Loader2, Plus, X, Trash2, ChevronDown, ChevronUp, GripVertical } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
@@ -114,7 +114,7 @@ export default function ProductForm({
   const [activeTab, setActiveTab] = useState('basic');
   const [expandedColorId, setExpandedColorId] = useState<string | null>(null);
   const [newColorName, setNewColorName] = useState('');
-  const [newColorHex, setNewColorHex] = useState('#4B5563');
+  const [dragState, setDragState] = useState<{ variantId: string; fromIndex: number } | null>(null);
   // Generate stable temp ID for new products to ensure unique upload paths
   const [tempProductId] = useState(() => `temp_${Date.now()}`);
 
@@ -300,7 +300,7 @@ export default function ProductForm({
     const newVariant: ProductColorVariant = {
       id: `color_${Date.now()}`,
       colorName: newColorName.trim(),
-      colorHex: newColorHex,
+      colorHex: '#888888',
       images: [],
       sizeInventory: formData.sizeVariants.map(sv => ({
         sizeId: sv.id,
@@ -315,7 +315,6 @@ export default function ProductForm({
     }));
     setExpandedColorId(newVariant.id);
     setNewColorName('');
-    setNewColorHex('#4B5563');
   };
 
   const handleRemoveColorVariant = (variantId: string) => {
@@ -572,16 +571,6 @@ export default function ProductForm({
                         className="h-9"
                       />
                     </div>
-                    <div className="space-y-1.5">
-                      <Label htmlFor="newColorHex" className="text-xs">Colour</Label>
-                      <input
-                        id="newColorHex"
-                        type="color"
-                        value={newColorHex}
-                        onChange={(e) => setNewColorHex(e.target.value)}
-                        className="w-9 h-9 rounded cursor-pointer border border-border"
-                      />
-                    </div>
                     <Button
                       type="button"
                       size="sm"
@@ -607,10 +596,6 @@ export default function ProductForm({
                             <CollapsibleTrigger asChild>
                               <button className="w-full flex items-center justify-between p-4 hover:bg-secondary/30 transition-colors">
                                 <div className="flex items-center gap-3">
-                                  <div
-                                    className="w-6 h-6 rounded-full border border-border"
-                                    style={{ backgroundColor: variant.colorHex }}
-                                  />
                                   <span className="font-medium">{variant.colorName}</span>
                                   {index === 0 && (
                                     <Badge variant="secondary" className="text-xs">Base Variant</Badge>
@@ -664,30 +649,66 @@ export default function ProductForm({
 
                                 {/* Images */}
                                 <div className="space-y-3">
-                                  <Label className="text-sm">Images</Label>
+                                  <Label className="text-sm">Images <span className="text-xs text-muted-foreground font-normal">(drag to reorder)</span></Label>
                                   <div className="grid grid-cols-3 gap-3">
-                                    {variant.images.map((image) => (
+                                    {[...variant.images]
+                                      .sort((a, b) => a.order - b.order)
+                                      .map((image, imgIndex) => (
                                       <div
                                         key={image.id}
-                                        className="relative aspect-square rounded-lg overflow-hidden border border-border"
+                                        draggable
+                                        onDragStart={() => setDragState({ variantId: variant.id, fromIndex: imgIndex })}
+                                        onDragOver={(e) => e.preventDefault()}
+                                        onDrop={(e) => {
+                                          e.preventDefault();
+                                          if (dragState && dragState.variantId === variant.id && dragState.fromIndex !== imgIndex) {
+                                            setFormData(prev => ({
+                                              ...prev,
+                                              colorVariants: prev.colorVariants.map(cv => {
+                                                if (cv.id !== variant.id) return cv;
+                                                const imgs = [...cv.images].sort((a, b) => a.order - b.order);
+                                                const [moved] = imgs.splice(dragState.fromIndex, 1);
+                                                imgs.splice(imgIndex, 0, moved);
+                                                return {
+                                                  ...cv,
+                                                  images: imgs.map((img, i) => ({ ...img, order: i, isPrimary: i === 0 }))
+                                                };
+                                              })
+                                            }));
+                                          }
+                                          setDragState(null);
+                                        }}
+                                        onDragEnd={() => setDragState(null)}
+                                        className={cn(
+                                          "relative aspect-square rounded-lg overflow-hidden border border-border cursor-grab active:cursor-grabbing group",
+                                          dragState?.variantId === variant.id && dragState?.fromIndex === imgIndex && "opacity-40"
+                                        )}
                                       >
                                         <img
                                           src={image.url}
                                           alt={image.alt}
                                           className="w-full h-full object-cover"
                                         />
+                                        <div className="absolute top-1 left-1 bg-background/80 rounded p-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                          <GripVertical className="h-3.5 w-3.5 text-muted-foreground" />
+                                        </div>
+                                        {imgIndex === 0 && (
+                                          <span className="absolute bottom-1 left-1 text-[10px] bg-gold text-gold-foreground px-1.5 py-0.5 rounded">
+                                            Primary
+                                          </span>
+                                        )}
                                         <Button
                                           type="button"
                                           variant="destructive"
                                           size="icon"
-                                          className="absolute top-2 right-2 h-6 w-6"
+                                          className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
                                           onClick={() => handleRemoveColorVariantImage(variant.id, image.id)}
                                         >
                                           <X className="h-3 w-3" />
                                         </Button>
                                       </div>
                                     ))}
-                                    <ImageUpload
+                                    <MultiImageUpload
                                       storagePath={`products/${product?.id || tempProductId}/colors/${variant.id}`}
                                       onUploadComplete={(url) => handleColorVariantImageUpload(variant.id, url)}
                                       aspectRatio="square"
