@@ -4,7 +4,7 @@
  * @module ProductDetail
  */
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
 import SEO from "@/components/SEO";
@@ -125,6 +125,59 @@ const ProductDetail = () => {
     return [{ id: '1', url: product?.primaryImageUrl || '', alt: product?.name || '', order: 0, isPrimary: true }];
   };
 
+  // Memoize product images for stable references
+  const productImages = useMemo(() => getCurrentImages(), [selectedColor, product]);
+
+  // Safe selected image index
+  const safeSelectedImage = selectedImage >= productImages.length ? 0 : selectedImage;
+
+  // Precompute optimized URLs for instant switching
+  const optimizedUrls = useMemo(() => {
+    return productImages.map(img => ({
+      thumb: getOptimizedImageUrl(img.url, 400),
+      full: getOptimizedImageUrl(img.url, 800),
+    }));
+  }, [productImages]);
+
+  // Preload all images for current color variant
+  useEffect(() => {
+    optimizedUrls.forEach(({ full }) => {
+      const img = new Image();
+      img.src = full;
+    });
+  }, [optimizedUrls]);
+
+  // Image loading state for crossfade
+  const [imageLoaded, setImageLoaded] = useState(true);
+
+  // Helper for image switching with crossfade
+  const handleImageSelect = (index: number) => {
+    if (index !== selectedImage) {
+      setImageLoaded(false);
+      setSelectedImage(index);
+    }
+  };
+
+  // Gallery ref for keyboard navigation
+  const galleryRef = useRef<HTMLDivElement>(null);
+
+  // Keyboard navigation for gallery
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!galleryRef.current?.contains(document.activeElement as Node)) return;
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+        e.preventDefault();
+        setImageLoaded(false);
+        setSelectedImage(prev => {
+          if (e.key === 'ArrowLeft') return Math.max(0, prev - 1);
+          return Math.min(productImages.length - 1, prev + 1);
+        });
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [productImages.length]);
+
   const handleAddToCart = () => {
     if (product && selectedSize && selectedColor && isInStock) {
       if (quantity > currentStock) return;
@@ -196,8 +249,6 @@ const ProductDetail = () => {
     );
   }
 
-  const productImages = getCurrentImages();
-
   return (
     <Layout>
       <SEO
@@ -233,21 +284,21 @@ const ProductDetail = () => {
       <div className="container mx-auto px-4 py-6 md:py-10">
         <div className="grid lg:grid-cols-2 gap-6 lg:gap-12">
           {/* Image Gallery */}
-          <div className="flex gap-3 md:gap-4">
+          <div ref={galleryRef} tabIndex={0} className="flex gap-3 md:gap-4 outline-none" role="region" aria-label="Product image gallery">
             {/* Thumbnails */}
             <div className="hidden sm:flex flex-col gap-2 md:gap-3">
               {productImages.map((img, index) => (
                 <button
                   key={img.id}
-                  onClick={() => setSelectedImage(index)}
+                  onClick={() => handleImageSelect(index)}
                   className={`w-14 h-14 md:w-20 md:h-20 rounded-lg overflow-hidden border-2 transition-all ${
-                    selectedImage === index 
+                    safeSelectedImage === index 
                       ? 'border-gold ring-2 ring-gold/20' 
                       : 'border-border hover:border-gold/50'
                   }`}
                 >
                   <img
-                    src={getOptimizedImageUrl(img.url, 400)}
+                    src={optimizedUrls[index]?.thumb}
                     alt={img.alt}
                     className="w-full h-full object-cover"
                   />
@@ -257,12 +308,17 @@ const ProductDetail = () => {
 
             {/* Main Image */}
             <div className="flex-1 relative">
-              <div className="aspect-square rounded-xl overflow-hidden bg-secondary">
-                <OptimizedImage
-                  src={productImages[selectedImage]?.url || product.primaryImageUrl}
+              <div className="aspect-square rounded-xl overflow-hidden bg-secondary relative">
+                {!imageLoaded && (
+                  <div className="absolute inset-0 animate-pulse bg-muted rounded-xl" />
+                )}
+                <img
+                  key={safeSelectedImage}
+                  src={optimizedUrls[safeSelectedImage]?.full || productImages[safeSelectedImage]?.url || product.primaryImageUrl}
                   alt={product.name}
-                  className="w-full h-full object-cover"
+                  className={`w-full h-full object-cover transition-opacity duration-200 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
                   loading="eager"
+                  onLoad={() => setImageLoaded(true)}
                 />
               </div>
               {product.badge && (
@@ -272,19 +328,19 @@ const ProductDetail = () => {
               )}
               
               {/* Mobile Thumbnails */}
-              <div className="flex sm:hidden gap-2 mt-3 overflow-x-auto pb-2">
+              <div className="flex sm:hidden gap-2 mt-3 overflow-x-auto pb-2 snap-x snap-mandatory scroll-smooth">
                 {productImages.map((img, index) => (
                   <button
                     key={img.id}
-                    onClick={() => setSelectedImage(index)}
-                    className={`w-14 h-14 flex-shrink-0 rounded-lg overflow-hidden border-2 transition-all ${
-                      selectedImage === index 
+                    onClick={() => handleImageSelect(index)}
+                    className={`w-14 h-14 flex-shrink-0 rounded-lg overflow-hidden border-2 transition-all snap-start ${
+                      safeSelectedImage === index 
                         ? 'border-gold' 
                         : 'border-border'
                     }`}
                   >
                     <img
-                      src={getOptimizedImageUrl(img.url, 400)}
+                      src={optimizedUrls[index]?.thumb}
                       alt={img.alt}
                       className="w-full h-full object-cover"
                     />
@@ -346,16 +402,18 @@ const ProductDetail = () => {
                       key={variant.id}
                       onClick={() => {
                         setSelectedColorId(variant.id);
+                        setImageLoaded(false);
                         setSelectedImage(0);
                       }}
-                      className={`w-10 h-10 rounded-full border-2 transition-all ${
+                      className={`px-4 py-2 rounded-full text-sm font-medium border transition-all ${
                         selectedColorId === variant.id
-                          ? 'border-gold ring-2 ring-gold/30 ring-offset-2'
-                          : 'border-border hover:border-gold/50'
+                          ? 'bg-gold text-gold-foreground border-gold'
+                          : 'bg-background border-border hover:border-gold/50 text-foreground'
                       }`}
-                      style={{ backgroundColor: variant.colorHex }}
-                      title={variant.colorName}
-                    />
+                      aria-label={`Select color ${variant.colorName}`}
+                    >
+                      {variant.colorName}
+                    </button>
                   ))}
                 </div>
               </div>

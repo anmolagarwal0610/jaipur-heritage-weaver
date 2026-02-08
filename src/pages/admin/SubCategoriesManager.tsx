@@ -318,7 +318,7 @@ export default function SubCategoriesManager() {
 
       {/* Add/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="font-serif">
               {editingSubCategory ? 'Edit Sub-Category' : 'Add Sub-Category'}
