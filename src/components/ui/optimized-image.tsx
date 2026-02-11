@@ -1,7 +1,7 @@
 /**
  * OptimizedImage Component
  * Responsive image component using Firebase resizeImage function
- * Automatically serves 400px for mobile and 800px for desktop
+ * Falls back to original URL if optimization fails, then placeholder
  */
 
 import { useState, forwardRef } from 'react';
@@ -29,15 +29,22 @@ const OptimizedImage = forwardRef<HTMLImageElement, OptimizedImageProps>(
     },
     ref
   ) => {
+    const [fallbackToOriginal, setFallbackToOriginal] = useState(false);
     const [hasError, setHasError] = useState(false);
     const { desktop, srcSet } = getResponsiveImageUrls(src);
 
     const handleError = (e: React.SyntheticEvent<HTMLImageElement>) => {
-      setHasError(true);
-      onError?.(e);
+      if (!fallbackToOriginal) {
+        // Optimized URL failed — try original src
+        setFallbackToOriginal(true);
+      } else {
+        // Original also failed — show placeholder
+        setHasError(true);
+        onError?.(e);
+      }
     };
 
-    // If no src or error, show placeholder
+    // If no src or both attempts failed, show placeholder
     if (!src || hasError) {
       return (
         <img
@@ -46,6 +53,23 @@ const OptimizedImage = forwardRef<HTMLImageElement, OptimizedImageProps>(
           alt={alt}
           className={className}
           loading={loading}
+          {...props}
+        />
+      );
+    }
+
+    // If optimized failed, render original src directly (no srcSet)
+    if (fallbackToOriginal) {
+      return (
+        <img
+          ref={ref}
+          src={src}
+          alt={alt}
+          className={cn(className)}
+          loading={loading}
+          decoding="async"
+          onLoad={onLoad}
+          onError={handleError}
           {...props}
         />
       );
