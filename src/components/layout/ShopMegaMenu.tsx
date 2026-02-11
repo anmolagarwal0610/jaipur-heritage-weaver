@@ -79,6 +79,7 @@ const ShopMegaMenu = ({ isActive }: { isActive?: boolean }) => {
       <NavigationMenuList>
         <NavigationMenuItem>
           <NavigationMenuTrigger 
+            onClick={(e) => e.preventDefault()}
             className={cn(
               "bg-transparent hover:bg-transparent focus:bg-transparent data-[state=open]:bg-transparent",
               "text-sm font-medium transition-colors hover:text-gold relative group h-[44px] flex items-center px-0 py-0 [&>svg]:hidden",

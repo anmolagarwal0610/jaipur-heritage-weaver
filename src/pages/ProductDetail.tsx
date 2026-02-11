@@ -1,10 +1,12 @@
 /**
  * Product Detail Page - Etsy-inspired clean design
  * Features: Image gallery, product info, size-based pricing, color variants
+ * Mobile: swipeable carousel with dot indicators + tap-to-zoom fullscreen
+ * Desktop: hover thumbnails for instant preview
  * @module ProductDetail
  */
 
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useParams, Link } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
 import SEO from "@/components/SEO";
@@ -16,11 +18,17 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Heart, Minus, Plus, ShoppingBag, MessageCircle, Check, Truck } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Heart, Minus, Plus, ShoppingBag, MessageCircle, Check, Truck, X, ChevronLeft, ChevronRight } from "lucide-react";
 import OptimizedImage from "@/components/ui/optimized-image";
 import { getOptimizedImageUrl } from "@/lib/image-utils";
 import { useProduct, useRelatedProducts } from "@/hooks/useProducts";
 import { useCart } from "@/contexts/CartContext";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { ProductSizeVariant, ProductColorVariant } from "@/lib/firebase-types";
 
 // Helper to get price range for related products
@@ -36,18 +44,19 @@ const ProductDetail = () => {
   const { product, loading } = useProduct(productId);
   const { relatedProducts } = useRelatedProducts(product?.categoryId, productId);
   const { addToCart } = useCart();
+  const isMobile = useIsMobile();
   
   const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [selectedSizeId, setSelectedSizeId] = useState<string>("");
   const [selectedColorId, setSelectedColorId] = useState<string>("");
+  const [zoomOpen, setZoomOpen] = useState(false);
 
   // Get size variants with fallback for legacy products
   const sizeVariants = useMemo(() => {
     if (product?.sizeVariants && product.sizeVariants.length > 0) {
       return product.sizeVariants;
     }
-    // Legacy fallback
     if (product?.price) {
       return [{
         id: 'default',
@@ -64,7 +73,6 @@ const ProductDetail = () => {
     if (product?.colorVariants && product.colorVariants.length > 0) {
       return product.colorVariants;
     }
-    // Legacy fallback - create a default color from images
     if (product?.images && product.images.length > 0) {
       return [{
         id: 'default',
@@ -93,18 +101,15 @@ const ProductDetail = () => {
     setQuantity(1);
   }, [product?.id]);
 
-  // Get currently selected size and color
   const selectedSize = sizeVariants.find(sv => sv.id === selectedSizeId);
   const selectedColor = colorVariants.find(cv => cv.id === selectedColorId);
   
-  // Get current price based on selected size
   const currentPrice = selectedSize?.price || 0;
   const currentComparePrice = selectedSize?.compareAtPrice || null;
   const discount = currentComparePrice 
     ? Math.round((1 - currentPrice / currentComparePrice) * 100) 
     : 0;
 
-  // Get stock for current color+size combo
   const getCurrentStock = (): number => {
     if (!selectedColor || !selectedSize) return 0;
     const inventory = selectedColor.sizeInventory?.find(
@@ -121,42 +126,42 @@ const ProductDetail = () => {
     if (selectedColor?.images?.length > 0) {
       return selectedColor.images.sort((a, b) => a.order - b.order);
     }
-    // Fallback to primary image
     return [{ id: '1', url: product?.primaryImageUrl || '', alt: product?.name || '', order: 0, isPrimary: true }];
   };
 
-  // Memoize product images for stable references
   const productImages = useMemo(() => getCurrentImages(), [selectedColor, product]);
-
-  // Safe selected image index
   const safeSelectedImage = selectedImage >= productImages.length ? 0 : selectedImage;
 
-  // Precompute optimized URLs for instant switching
-  const optimizedUrls = useMemo(() => {
+  // Precompute URLs — both optimized and original for fallback
+  const imageData = useMemo(() => {
     return productImages.map(img => ({
       thumb: getOptimizedImageUrl(img.url, 400),
       full: getOptimizedImageUrl(img.url, 800),
+      original: img.url, // fallback if optimized fails
+      alt: img.alt || product?.name || '',
     }));
-  }, [productImages]);
+  }, [productImages, product?.name]);
 
-  // Preload all images for current color variant
+  // Preload all images for current color variant (both optimized and original)
   useEffect(() => {
-    optimizedUrls.forEach(({ full }) => {
-      const img = new Image();
-      img.src = full;
+    imageData.forEach(({ full, original }) => {
+      const img1 = new Image();
+      img1.src = full;
+      // Also preload original as fallback
+      const img2 = new Image();
+      img2.src = original;
     });
-  }, [optimizedUrls]);
+  }, [imageData]);
 
   // Image loading state for crossfade
   const [imageLoaded, setImageLoaded] = useState(true);
 
-  // Helper for image switching with crossfade
-  const handleImageSelect = (index: number) => {
+  const handleImageSelect = useCallback((index: number) => {
     if (index !== selectedImage) {
       setImageLoaded(false);
       setSelectedImage(index);
     }
-  };
+  }, [selectedImage]);
 
   // Gallery ref for keyboard navigation
   const galleryRef = useRef<HTMLDivElement>(null);
@@ -177,6 +182,47 @@ const ProductDetail = () => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [productImages.length]);
+
+  // --- Mobile carousel scroll tracking ---
+  const carouselRef = useRef<HTMLDivElement>(null);
+
+  const handleCarouselScroll = useCallback(() => {
+    const el = carouselRef.current;
+    if (!el) return;
+    const scrollLeft = el.scrollLeft;
+    const width = el.clientWidth;
+    const index = Math.round(scrollLeft / width);
+    if (index !== selectedImage && index >= 0 && index < productImages.length) {
+      setSelectedImage(index);
+    }
+  }, [selectedImage, productImages.length]);
+
+  // --- Fullscreen zoom navigation ---
+  const handleZoomPrev = useCallback(() => {
+    setSelectedImage(prev => Math.max(0, prev - 1));
+  }, []);
+
+  const handleZoomNext = useCallback(() => {
+    setSelectedImage(prev => Math.min(productImages.length - 1, prev + 1));
+  }, [productImages.length]);
+
+  // --- Image error fallback state ---
+  const [mainImageFallback, setMainImageFallback] = useState(false);
+
+  // Reset fallback when image changes
+  useEffect(() => {
+    setMainImageFallback(false);
+  }, [safeSelectedImage, selectedColorId]);
+
+  const mainImageSrc = mainImageFallback
+    ? imageData[safeSelectedImage]?.original
+    : imageData[safeSelectedImage]?.full;
+
+  const handleMainImageError = () => {
+    if (!mainImageFallback) {
+      setMainImageFallback(true);
+    }
+  };
 
   const handleAddToCart = () => {
     if (product && selectedSize && selectedColor && isInStock) {
@@ -284,75 +330,194 @@ const ProductDetail = () => {
       <div className="container mx-auto px-4 py-6 md:py-10">
         <div className="grid lg:grid-cols-2 gap-6 lg:gap-12">
           {/* Image Gallery */}
-          <div ref={galleryRef} tabIndex={0} className="flex gap-3 md:gap-4 outline-none" role="region" aria-label="Product image gallery">
-            {/* Thumbnails */}
-            <div className="hidden sm:flex flex-col gap-2 md:gap-3">
-              {productImages.map((img, index) => (
-                <button
-                  key={img.id}
-                  onClick={() => handleImageSelect(index)}
-                  className={`w-14 h-14 md:w-20 md:h-20 rounded-lg overflow-hidden border-2 transition-all ${
-                    safeSelectedImage === index 
-                      ? 'border-gold ring-2 ring-gold/20' 
-                      : 'border-border hover:border-gold/50'
-                  }`}
+          <div ref={galleryRef} tabIndex={0} className="outline-none" role="region" aria-label="Product image gallery">
+            
+            {/* ===== MOBILE: Swipeable Carousel ===== */}
+            {isMobile ? (
+              <div>
+                {/* Carousel container */}
+                <div
+                  ref={carouselRef}
+                  onScroll={handleCarouselScroll}
+                  className="flex overflow-x-auto snap-x snap-mandatory scroll-smooth rounded-xl bg-secondary"
+                  style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}
                 >
-                  <img
-                    src={optimizedUrls[index]?.thumb}
-                    alt={img.alt}
-                    className="w-full h-full object-cover"
-                  />
-                </button>
-              ))}
-            </div>
+                  {imageData.map((img, index) => (
+                    <div
+                      key={productImages[index]?.id || index}
+                      className="w-full flex-shrink-0 snap-center aspect-square relative"
+                      onClick={() => setZoomOpen(true)}
+                    >
+                      <FallbackImage
+                        optimizedSrc={img.full}
+                        originalSrc={img.original}
+                        alt={img.alt}
+                        className="w-full h-full object-cover"
+                        loading="eager"
+                      />
+                    </div>
+                  ))}
+                </div>
 
-            {/* Main Image */}
-            <div className="flex-1 relative">
-              <div className="aspect-square rounded-xl overflow-hidden bg-secondary relative">
-                {!imageLoaded && (
-                  <div className="absolute inset-0 animate-pulse bg-muted rounded-xl" />
+                {/* Dot indicators */}
+                {imageData.length > 1 && (
+                  <div className="flex justify-center gap-1.5 mt-3">
+                    {imageData.map((_, index) => (
+                      <button
+                        key={index}
+                        onClick={() => {
+                          setSelectedImage(index);
+                          carouselRef.current?.scrollTo({ left: index * (carouselRef.current?.clientWidth || 0), behavior: 'smooth' });
+                        }}
+                        className={`w-2 h-2 rounded-full transition-all ${
+                          safeSelectedImage === index
+                            ? 'bg-gold w-4'
+                            : 'bg-border'
+                        }`}
+                        aria-label={`View image ${index + 1}`}
+                      />
+                    ))}
+                  </div>
                 )}
+
+                {/* Image counter */}
+                <p className="text-center text-xs text-muted-foreground mt-1">
+                  {safeSelectedImage + 1} / {imageData.length}
+                </p>
+
+                {/* Badge */}
+                {product.badge && (
+                  <span className="absolute top-3 left-3 bg-terracotta text-terracotta-foreground text-xs font-medium px-3 py-1 rounded z-10">
+                    {product.badge}
+                  </span>
+                )}
+              </div>
+            ) : (
+              /* ===== DESKTOP: Thumbnails + Main Image ===== */
+              <div className="flex gap-3 md:gap-4">
+                {/* Thumbnails — hover to switch */}
+                <div className="flex flex-col gap-2 md:gap-3">
+                  {imageData.map((img, index) => (
+                    <button
+                      key={productImages[index]?.id || index}
+                      onMouseEnter={() => handleImageSelect(index)}
+                      onClick={() => handleImageSelect(index)}
+                      className={`w-14 h-14 md:w-20 md:h-20 rounded-lg overflow-hidden border-2 transition-all ${
+                        safeSelectedImage === index 
+                          ? 'border-gold ring-2 ring-gold/20' 
+                          : 'border-border hover:border-gold/50'
+                      }`}
+                    >
+                      <FallbackImage
+                        optimizedSrc={img.thumb}
+                        originalSrc={imageData[index]?.original}
+                        alt={img.alt}
+                        className="w-full h-full object-cover"
+                      />
+                    </button>
+                  ))}
+                </div>
+
+                {/* Main Image */}
+                <div className="flex-1 relative">
+                  <div
+                    className="aspect-square rounded-xl overflow-hidden bg-secondary relative cursor-zoom-in"
+                    onClick={() => setZoomOpen(true)}
+                  >
+                    {!imageLoaded && (
+                      <div className="absolute inset-0 animate-pulse bg-muted rounded-xl" />
+                    )}
+                    <img
+                      key={`${selectedColorId}-${safeSelectedImage}`}
+                      src={mainImageSrc || productImages[safeSelectedImage]?.url || product.primaryImageUrl}
+                      alt={product.name}
+                      className={`w-full h-full object-cover transition-opacity duration-200 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
+                      loading="eager"
+                      onLoad={() => setImageLoaded(true)}
+                      onError={handleMainImageError}
+                    />
+                  </div>
+                  {product.badge && (
+                    <span className="absolute top-3 left-3 bg-terracotta text-terracotta-foreground text-xs font-medium px-3 py-1 rounded">
+                      {product.badge}
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* ===== Fullscreen Zoom Modal ===== */}
+          <Dialog open={zoomOpen} onOpenChange={setZoomOpen}>
+            <DialogContent className="max-w-none w-screen h-screen p-0 border-0 bg-black/95 rounded-none [&>button]:hidden">
+              <DialogTitle className="sr-only">Product image zoom</DialogTitle>
+              {/* Close */}
+              <button
+                onClick={() => setZoomOpen(false)}
+                className="absolute top-4 right-4 z-50 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+                aria-label="Close zoom"
+              >
+                <X className="h-5 w-5" />
+              </button>
+
+              {/* Image counter */}
+              <div className="absolute top-4 left-4 z-50 text-white/70 text-sm">
+                {safeSelectedImage + 1} / {imageData.length}
+              </div>
+
+              {/* Nav arrows */}
+              {safeSelectedImage > 0 && (
+                <button
+                  onClick={handleZoomPrev}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 z-50 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+                  aria-label="Previous image"
+                >
+                  <ChevronLeft className="h-6 w-6" />
+                </button>
+              )}
+              {safeSelectedImage < imageData.length - 1 && (
+                <button
+                  onClick={handleZoomNext}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 z-50 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+                  aria-label="Next image"
+                >
+                  <ChevronRight className="h-6 w-6" />
+                </button>
+              )}
+
+              {/* Zoomable image */}
+              <div className="w-full h-full flex items-center justify-center overflow-auto touch-pinch-zoom">
                 <img
-                  key={safeSelectedImage}
-                  src={optimizedUrls[safeSelectedImage]?.full || productImages[safeSelectedImage]?.url || product.primaryImageUrl}
+                  src={imageData[safeSelectedImage]?.original || productImages[safeSelectedImage]?.url}
                   alt={product.name}
-                  className={`w-full h-full object-cover transition-opacity duration-200 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
-                  loading="eager"
-                  onLoad={() => setImageLoaded(true)}
+                  className="max-w-[200%] max-h-[200%] object-contain select-none"
+                  draggable={false}
                 />
               </div>
-              {product.badge && (
-                <span className="absolute top-3 left-3 bg-terracotta text-terracotta-foreground text-xs font-medium px-3 py-1 rounded">
-                  {product.badge}
-                </span>
-              )}
-              
-              {/* Mobile Thumbnails */}
-              <div className="flex sm:hidden gap-2 mt-3 overflow-x-auto pb-2 snap-x snap-mandatory scroll-smooth">
-                {productImages.map((img, index) => (
-                  <button
-                    key={img.id}
-                    onClick={() => handleImageSelect(index)}
-                    className={`w-14 h-14 flex-shrink-0 rounded-lg overflow-hidden border-2 transition-all snap-start ${
-                      safeSelectedImage === index 
-                        ? 'border-gold' 
-                        : 'border-border'
-                    }`}
-                  >
-                    <img
-                      src={optimizedUrls[index]?.thumb}
-                      alt={img.alt}
-                      className="w-full h-full object-cover"
+
+              {/* Dot indicators in modal */}
+              {imageData.length > 1 && (
+                <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-2">
+                  {imageData.map((_, index) => (
+                    <button
+                      key={index}
+                      onClick={() => setSelectedImage(index)}
+                      className={`w-2.5 h-2.5 rounded-full transition-all ${
+                        safeSelectedImage === index
+                          ? 'bg-white w-5'
+                          : 'bg-white/40'
+                      }`}
+                      aria-label={`View image ${index + 1}`}
                     />
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
+                  ))}
+                </div>
+              )}
+            </DialogContent>
+          </Dialog>
 
           {/* Product Info */}
           <div className="lg:sticky lg:top-24 lg:self-start space-y-5">
-            {/* Price - based on selected size */}
+            {/* Price */}
             <div className="flex items-baseline gap-3 flex-wrap">
               <span className="text-2xl md:text-3xl font-semibold text-foreground">
                 ₹{currentPrice.toLocaleString()}
@@ -404,6 +569,7 @@ const ProductDetail = () => {
                         setSelectedColorId(variant.id);
                         setImageLoaded(false);
                         setSelectedImage(0);
+                        setMainImageFallback(false);
                       }}
                       className={`px-4 py-2 rounded-full text-sm font-medium border transition-all ${
                         selectedColorId === variant.id
@@ -419,13 +585,12 @@ const ProductDetail = () => {
               </div>
             )}
 
-            {/* Size Selector with prices */}
+            {/* Size Selector */}
             {sizeVariants.length > 0 && (
               <div className="space-y-2">
                 <label className="text-sm font-medium text-foreground">Size</label>
                 <div className="flex flex-wrap gap-2">
                   {sizeVariants.map((sv) => {
-                    // Check if this size is available in selected color
                     const colorInv = selectedColor?.sizeInventory?.find(
                       si => si.sizeName === sv.sizeName
                     );
@@ -622,6 +787,49 @@ const ProductDetail = () => {
         )}
       </div>
     </Layout>
+  );
+};
+
+/**
+ * FallbackImage: tries optimized src first, falls back to original on error
+ */
+const FallbackImage = ({
+  optimizedSrc,
+  originalSrc,
+  alt,
+  className,
+  loading = 'lazy' as const,
+}: {
+  optimizedSrc: string;
+  originalSrc: string;
+  alt: string;
+  className?: string;
+  loading?: 'lazy' | 'eager';
+}) => {
+  const [useFallback, setUseFallback] = useState(false);
+  const [hasError, setHasError] = useState(false);
+
+  const handleError = () => {
+    if (!useFallback) {
+      setUseFallback(true);
+    } else {
+      setHasError(true);
+    }
+  };
+
+  if (hasError) {
+    return <img src="/placeholder.svg" alt={alt} className={className} />;
+  }
+
+  return (
+    <img
+      src={useFallback ? originalSrc : optimizedSrc}
+      alt={alt}
+      className={className}
+      loading={loading}
+      decoding="async"
+      onError={handleError}
+    />
   );
 };
 
