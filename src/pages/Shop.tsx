@@ -52,20 +52,12 @@ const Shop = () => {
     return map;
   }, [subCategories]);
 
-  // Update URL when category/subcategory changes
-  useEffect(() => {
-    const params: Record<string, string> = {};
-    if (selectedCategorySlug) params.category = selectedCategorySlug;
-    if (selectedSubCategorySlug) params.subcategory = selectedSubCategorySlug;
-    setSearchParams(params);
-  }, [selectedCategorySlug, selectedSubCategorySlug, setSearchParams]);
-
-  // Sync from URL params (e.g. mega menu links)
+  // One-way sync: URL → state (handles mega menu links, back/forward nav)
   useEffect(() => {
     const cat = searchParams.get("category");
     const sub = searchParams.get("subcategory");
-    if (cat !== selectedCategorySlug) setSelectedCategorySlug(cat);
-    if (sub !== selectedSubCategorySlug) setSelectedSubCategorySlug(sub);
+    setSelectedCategorySlug(cat);
+    setSelectedSubCategorySlug(sub);
   }, [searchParams]);
 
   // Get active categories for the filter sidebar
@@ -126,13 +118,18 @@ const Shop = () => {
     : null;
 
   const handleCategorySelect = (slug: string | null) => {
-    setSelectedCategorySlug(slug);
-    setSelectedSubCategorySlug(null); // Reset subcategory when category changes
+    const params: Record<string, string> = {};
+    if (slug) params.category = slug;
+    // Reset subcategory when category changes
+    setSearchParams(params, { replace: true });
     setMobileFiltersOpen(false);
   };
 
   const handleSubCategorySelect = (slug: string | null) => {
-    setSelectedSubCategorySlug(slug);
+    const params: Record<string, string> = {};
+    if (selectedCategorySlug) params.category = selectedCategorySlug;
+    if (slug) params.subcategory = slug;
+    setSearchParams(params, { replace: true });
     setMobileFiltersOpen(false);
   };
 

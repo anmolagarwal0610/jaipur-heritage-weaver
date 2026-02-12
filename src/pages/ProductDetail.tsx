@@ -219,21 +219,21 @@ const ProductDetail = () => {
     setSelectedImage(prev => Math.min(productImages.length - 1, prev + 1));
   }, [productImages.length]);
 
-  // --- Image error fallback state ---
-  const [mainImageFallback, setMainImageFallback] = useState(false);
+  // --- Per-image fallback tracking (avoids retrying failed optimized URLs) ---
+  const [failedOptimized, setFailedOptimized] = useState<Set<number>>(new Set());
 
-  // Reset fallback when image changes
+  // Reset only when color variant changes (not on every image switch)
   useEffect(() => {
-    setMainImageFallback(false);
-  }, [safeSelectedImage, selectedColorId]);
+    setFailedOptimized(new Set());
+  }, [selectedColorId]);
 
-  const mainImageSrc = mainImageFallback
+  const mainImageSrc = failedOptimized.has(safeSelectedImage)
     ? imageData[safeSelectedImage]?.original
     : imageData[safeSelectedImage]?.full;
 
   const handleMainImageError = () => {
-    if (!mainImageFallback) {
-      setMainImageFallback(true);
+    if (!failedOptimized.has(safeSelectedImage)) {
+      setFailedOptimized(prev => new Set(prev).add(safeSelectedImage));
     }
   };
 
@@ -401,10 +401,11 @@ const ProductDetail = () => {
 
                 {/* Mobile Thumbnail Strip */}
                 {imageData.length > 1 && (
-                  <div
-                    className="flex gap-2 mt-3 overflow-x-auto snap-x px-1 pb-1"
-                    style={{ scrollbarWidth: 'none' }}
-                  >
+                  <div className="overflow-hidden w-full mt-3">
+                    <div
+                      className="flex gap-2 overflow-x-auto snap-x px-1 pb-1"
+                      style={{ scrollbarWidth: 'none' }}
+                    >
                     {imageData.map((img, index) => (
                       <button
                         key={productImages[index]?.id || index}
@@ -426,6 +427,7 @@ const ProductDetail = () => {
                         />
                       </button>
                     ))}
+                    </div>
                   </div>
                 )}
 
@@ -617,7 +619,7 @@ const ProductDetail = () => {
                         setSelectedColorId(variant.id);
                         setImageLoaded(false);
                         setSelectedImage(0);
-                        setMainImageFallback(false);
+                        setFailedOptimized(new Set());
                       }}
                       className={`px-4 py-2 rounded-full text-sm font-medium border transition-all ${
                         selectedColorId === variant.id
