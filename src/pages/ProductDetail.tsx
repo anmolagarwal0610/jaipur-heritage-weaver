@@ -142,10 +142,18 @@ const ProductDetail = () => {
     }));
   }, [productImages, product?.name]);
 
+  // Track which images have been fully loaded (for instant hover switching)
+  const [loadedImages, setLoadedImages] = useState<Set<number>>(new Set());
+
   // Preload all images for current color variant (both optimized and original)
   useEffect(() => {
-    imageData.forEach(({ full, original }) => {
+    // Reset loaded tracking when color changes
+    setLoadedImages(new Set());
+    imageData.forEach(({ full, original }, index) => {
       const img1 = new Image();
+      img1.onload = () => {
+        setLoadedImages(prev => new Set(prev).add(index));
+      };
       img1.src = full;
       // Also preload original as fallback
       const img2 = new Image();
@@ -158,10 +166,15 @@ const ProductDetail = () => {
 
   const handleImageSelect = useCallback((index: number) => {
     if (index !== selectedImage) {
-      setImageLoaded(false);
+      // If image is already cached, skip fade transition
+      if (loadedImages.has(index)) {
+        setImageLoaded(true);
+      } else {
+        setImageLoaded(false);
+      }
       setSelectedImage(index);
     }
-  }, [selectedImage]);
+  }, [selectedImage, loadedImages]);
 
   // Gallery ref for keyboard navigation
   const galleryRef = useRef<HTMLDivElement>(null);
@@ -339,13 +352,14 @@ const ProductDetail = () => {
                 <div
                   ref={carouselRef}
                   onScroll={handleCarouselScroll}
-                  className="flex overflow-x-auto snap-x snap-mandatory scroll-smooth rounded-xl bg-secondary"
-                  style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}
+                  className="flex overflow-x-auto snap-x snap-mandatory rounded-xl bg-secondary"
+                  style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch', willChange: 'scroll-position' }}
                 >
                   {imageData.map((img, index) => (
                     <div
                       key={productImages[index]?.id || index}
-                      className="w-full flex-shrink-0 snap-center aspect-square relative"
+                      className="w-full flex-shrink-0 snap-start aspect-square relative"
+                      style={{ scrollSnapStop: 'always' }}
                       onClick={() => setZoomOpen(true)}
                     >
                       <FallbackImage
@@ -384,6 +398,36 @@ const ProductDetail = () => {
                 <p className="text-center text-xs text-muted-foreground mt-1">
                   {safeSelectedImage + 1} / {imageData.length}
                 </p>
+
+                {/* Mobile Thumbnail Strip */}
+                {imageData.length > 1 && (
+                  <div
+                    className="flex gap-2 mt-3 overflow-x-auto snap-x px-1 pb-1"
+                    style={{ scrollbarWidth: 'none' }}
+                  >
+                    {imageData.map((img, index) => (
+                      <button
+                        key={productImages[index]?.id || index}
+                        onClick={() => {
+                          setSelectedImage(index);
+                          carouselRef.current?.scrollTo({ left: index * (carouselRef.current?.clientWidth || 0), behavior: 'smooth' });
+                        }}
+                        className={`w-12 h-12 flex-shrink-0 snap-start rounded-lg overflow-hidden border-2 transition-all ${
+                          safeSelectedImage === index
+                            ? 'border-gold ring-1 ring-gold/30'
+                            : 'border-border'
+                        }`}
+                      >
+                        <FallbackImage
+                          optimizedSrc={img.thumb}
+                          originalSrc={img.original}
+                          alt={img.alt}
+                          className="w-full h-full object-cover"
+                        />
+                      </button>
+                    ))}
+                  </div>
+                )}
 
                 {/* Badge */}
                 {product.badge && (
@@ -454,10 +498,10 @@ const ProductDetail = () => {
               {/* Close */}
               <button
                 onClick={() => setZoomOpen(false)}
-                className="absolute top-4 right-4 z-50 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
-                aria-label="Close zoom"
+                className="absolute top-4 right-4 z-50 p-3 rounded-full bg-white/20 hover:bg-white/30 text-white transition-colors min-w-[48px] min-h-[48px] flex items-center justify-center"
+                aria-label="Close fullscreen"
               >
-                <X className="h-5 w-5" />
+                <X className="h-6 w-6" />
               </button>
 
               {/* Image counter */}
@@ -485,13 +529,17 @@ const ProductDetail = () => {
                 </button>
               )}
 
-              {/* Zoomable image */}
-              <div className="w-full h-full flex items-center justify-center overflow-auto touch-pinch-zoom">
+              {/* Fullscreen image (no zoom, fits screen) */}
+              <div
+                className="w-full h-full flex items-center justify-center p-4"
+                onClick={() => setZoomOpen(false)}
+              >
                 <img
                   src={imageData[safeSelectedImage]?.original || productImages[safeSelectedImage]?.url}
                   alt={product.name}
-                  className="max-w-[200%] max-h-[200%] object-contain select-none"
+                  className="max-w-full max-h-full object-contain select-none"
                   draggable={false}
+                  onClick={(e) => e.stopPropagation()}
                 />
               </div>
 
