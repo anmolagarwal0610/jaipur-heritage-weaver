@@ -1,78 +1,60 @@
 
 
-## Plan: Product Page UX Fixes + Subcategory Filtering
+## Plan: Fix Subcategory Filter, Image Loading, and Mobile Thumbnails
 
-This plan addresses 5 specific issues plus overall polish improvements.
+### Issue 1: Subcategory Filter Broken + Infinite Loop
+
+**Root Cause Analysis - 6 potential causes investigated:**
+
+1. **[CONFIRMED - INFINITE LOOP] Circular useEffect dependency between URL sync and state sync.** Lines 56-61 and 64-69 in `Shop.tsx` create a loop: state changes trigger URL update (effect 1), URL change triggers state update (effect 2), which triggers URL update again. This causes the "vibrating text" symptom -- rapid re-renders as both effects fire alternately.
+
+2. **[CONFIRMED - NO PRODUCTS] Subcategory slug mismatch.** When clicking from the mega menu, the URL contains `subcategory=king-size`. The filtering at line 97 looks up `subCategories.find(sc => sc.slug === selectedSubCategorySlug)`. If the subcategory's `slug` field in Firestore doesn't exactly match `king-size` (e.g., it could be `king_size` or `King Size`), the lookup fails and no products match.
+
+3. **[CONFIRMED - NO PRODUCTS] Category slug not passed correctly from mega menu.** The mega menu links to `/shop?category=${currentCategory?.slug}&subcategory=${sub.slug}`. If `currentCategory?.slug` is the Firestore slug but the Shop page compares against `categories.find(c => c.slug === selectedCategorySlug)`, any mismatch means no category match and therefore no products.
+
+4. **[INVESTIGATED] Products might not have `isActive` set.** The filter at line 87 does `products.filter(p => p.isActive)`. If a product doesn't have `isActive` field at all, `p.isActive` would be `undefined` (falsy), hiding the product. This is possible but less likely since products are being created through the admin form.
+
+5. **[INVESTIGATED] Firestore index missing for products query.** The network logs show a `code: 9` error requiring a composite index for `categoryId + isActive + createdAt`. This affects `fetchRelatedProducts` but not the main `useProducts()` call in Shop (which fetches all products with just `orderBy('createdAt', 'desc')`).
+
+6. **[INVESTIGATED] `useSubCategories()` called without categoryId.** Shop.tsx calls `useSubCategories()` with no argument, which fetches ALL subcategories. This is correct for the lookup logic.
+
+**Fix:**
+
+**File: `src/pages/Shop.tsx`**
+- **Remove the dual useEffect loop.** Replace the two competing effects with a single `useEffect` that reads from URL params on mount/URL change and sets state, plus use `setSearchParams` directly inside the handler functions (not in a separate effect). This eliminates the circular dependency.
+- The `handleCategorySelect` and `handleSubCategorySelect` functions will directly call `setSearchParams` in addition to setting state, removing the need for the state-to-URL sync effect entirely.
 
 ---
 
-### Issue 1: Mobile Carousel Skips Images on Fast Swipe
+### Issue 2: Desktop Hover Image Loading Delay (2-3 seconds per hover)
 
-**Root Cause:** The carousel uses CSS `scroll-snap-x` with `scroll-smooth`, which allows momentum scrolling to jump multiple snap points.
+**Root Cause:**
+The desktop main image (line 474) uses a raw `<img>` tag with `src={mainImageSrc}`. The `mainImageSrc` is computed from `getOptimizedImageUrl()` which points to the Firebase resize function. This function returns 500 errors, triggering the `handleMainImageError` fallback to the original URL. The problem:
+
+1. On each hover, `selectedImage` changes
+2. `mainImageFallback` is reset to `false` (line 227)
+3. The component first tries the optimized URL (which returns 500)
+4. Only after the 500 error does it fallback to original
+5. This 500 request + fallback happens on EVERY hover, even for previously viewed images
+
+The `loadedImages` Set tracks preload completion, but the main image still goes through the optimized-then-fallback cycle each time because `mainImageFallback` resets per image index.
 
 **Fix in `src/pages/ProductDetail.tsx`:**
-- Remove `scroll-smooth` from the carousel container (it interferes with snap behavior during fast swipes)
-- Add `-webkit-overflow-scrolling: touch` is already set; the key fix is removing `scroll-smooth`
-- Change snap type from `snap-x snap-mandatory` to ensure each child uses `snap-start` instead of `snap-center` (more predictable single-step behavior)
-- Add `will-change: scroll-position` for GPU-accelerated scrolling
-- The `scroll-snap-stop: always` CSS property on each child prevents skipping -- this is the critical fix. Add inline style `scrollSnapStop: 'always'` to each slide
+- Change `mainImageFallback` from a single boolean to a `Set<number>` tracking which image indices have already failed optimization
+- When image at index N fails, add N to the set
+- On subsequent hovers to index N, immediately use the original URL (skip the failed optimized attempt)
+- This means: first view = try optimized, fail, fallback; subsequent views = instant original URL
 
 ---
 
-### Issue 2: Subcategory Filtering in Shop Page
+### Issue 3: Mobile Thumbnails Overflow Page Width
 
-**Root Cause:** The Shop page only reads `category` from the URL query params and completely ignores the `subcategory` param, even though the mega menu and mobile menu both link to `/shop?category=X&subcategory=Y`.
-
-**Changes to `src/pages/Shop.tsx`:**
-
-1. Add `selectedSubCategorySlug` state initialized from `searchParams.get("subcategory")`
-2. Update `useEffect` to sync both `category` and `subcategory` params to the URL
-3. Compute `activeSubCategories` -- subcategories that belong to the selected category
-4. Update `filteredProducts` to filter by subcategory when one is selected
-5. Add subcategory filter UI:
-   - **Desktop sidebar:** Below the Categories section, show a "Subcategories" section (only when a category is selected) with checkbox-style filters matching the existing category pattern
-   - **Mobile filter sheet:** Same subcategory section appears below categories
-6. Show active subcategory filter as a removable chip in the active filters bar
-7. Add a `handleSubCategorySelect` function that sets the slug and closes mobile filters
-
----
-
-### Issue 3: Zoom Modal Shows Oversized Image with No Close
-
-**Root Cause:** The zoom modal renders the image at `max-w-[200%] max-h-[200%]` which makes it appear zoomed-in. The close button exists but is small and hard to notice against the dark background.
+**Root Cause:** The thumbnail strip at line 403-430 uses `overflow-x-auto` which should scroll, but the container has no `max-width` constraint. The `flex-shrink-0` on each thumbnail prevents them from shrinking, and the parent container may not be constraining width properly.
 
 **Fix in `src/pages/ProductDetail.tsx`:**
-- Change the fullscreen modal to a **simple fullscreen image viewer** (not a zoom):
-  - Set image to `max-w-full max-h-full object-contain` (fits the screen, no zoom)
-  - Remove `touch-pinch-zoom` and `overflow-auto` from the container
-  - Make the close button larger and more prominent (top-right, white X on semi-transparent circle, larger hit target)
-  - Keep navigation arrows and dot indicators
-  - Tapping the image itself closes the modal (intuitive mobile behavior)
-
----
-
-### Issue 4: Add Mobile Thumbnail Strip Below Carousel
-
-**Changes to `src/pages/ProductDetail.tsx`:**
-- Below the dot indicators on mobile, add a horizontally scrollable thumbnail strip
-- Each thumbnail: small image (48x48px), rounded, with active border highlight
-- Use `overflow-x-auto` with `snap-x` for smooth horizontal scrolling
-- Tapping a thumbnail scrolls the main carousel to that image
-- Hide scrollbar with `scrollbar-width: none`
-- Only show when there are 2+ images
-
----
-
-### Issue 5: Desktop Hover Delay on Thumbnails (2-3 seconds)
-
-**Root Cause:** Although images are preloaded via `new Image()`, the `imageLoaded` state is set to `false` on every hover (line 161), triggering a fade-out/skeleton. The image then needs to fire its `onLoad` event to show again. This creates a perceived 2-3 second delay even though the image may already be cached.
-
-**Fix in `src/pages/ProductDetail.tsx`:**
-- Track which images have been loaded in a `Set<number>` (e.g., `loadedImages` state)
-- On first load of each image, add its index to the set
-- On subsequent hovers, if the image is already in `loadedImages`, skip the fade transition entirely (set `imageLoaded` to `true` immediately)
-- This means: first hover = brief fade transition; subsequent hovers = instant switch
-- Additionally, in the preload `useEffect`, mark images as loaded when the `Image()` object fires `onload`
+- Add `max-w-full` and `w-full` to the thumbnail strip container
+- Ensure the parent `<div>` constrains width properly
+- The key fix: the thumbnail container needs an explicit width constraint so `overflow-x-auto` activates. Add `overflow-hidden` to the parent container wrapping the entire mobile gallery section.
 
 ---
 
@@ -80,6 +62,24 @@ This plan addresses 5 specific issues plus overall polish improvements.
 
 | File | Action | Description |
 |------|--------|-------------|
-| `src/pages/ProductDetail.tsx` | Modify | Fix carousel snap-stop, simplify zoom modal, add mobile thumbnails, fix hover delay |
-| `src/pages/Shop.tsx` | Modify | Add subcategory filtering with URL sync and sidebar UI |
+| `src/pages/Shop.tsx` | Modify | Fix infinite loop by removing dual useEffect, sync URL directly in handlers |
+| `src/pages/ProductDetail.tsx` | Modify | Fix per-image fallback tracking, constrain mobile thumbnail width |
+
+### Technical Details
+
+**Shop.tsx infinite loop fix:**
+- Remove the effect at lines 56-61 (state-to-URL sync)
+- Keep only the URL-to-state sync effect (lines 64-69) for handling external navigation (mega menu clicks)
+- Move `setSearchParams` calls into `handleCategorySelect` and `handleSubCategorySelect` directly
+- This breaks the circular dependency: URL changes set state (one-way), and user actions set both state and URL (direct)
+
+**ProductDetail.tsx fallback tracking:**
+- Replace `const [mainImageFallback, setMainImageFallback] = useState(false)` with `const [failedOptimized, setFailedOptimized] = useState<Set<number>>(new Set())`
+- Reset the set when `selectedColorId` changes (not on every image switch)
+- `mainImageSrc` becomes: `failedOptimized.has(safeSelectedImage) ? imageData[safeSelectedImage]?.original : imageData[safeSelectedImage]?.full`
+- On error: `setFailedOptimized(prev => new Set(prev).add(safeSelectedImage))`
+
+**Mobile thumbnail width fix:**
+- Wrap the mobile gallery in a container with `overflow-hidden w-full`
+- The thumbnail strip already has `overflow-x-auto` which will now correctly activate since the parent constrains width
 
