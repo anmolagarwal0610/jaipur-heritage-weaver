@@ -29,6 +29,9 @@ const Shop = () => {
   const [selectedCategorySlug, setSelectedCategorySlug] = useState<string | null>(
     searchParams.get("category")
   );
+  const [selectedSubCategorySlug, setSelectedSubCategorySlug] = useState<string | null>(
+    searchParams.get("subcategory")
+  );
   const [sortBy, setSortBy] = useState("featured");
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
@@ -49,14 +52,21 @@ const Shop = () => {
     return map;
   }, [subCategories]);
 
-  // Update URL when category changes
+  // Update URL when category/subcategory changes
   useEffect(() => {
-    if (selectedCategorySlug) {
-      setSearchParams({ category: selectedCategorySlug });
-    } else {
-      setSearchParams({});
-    }
-  }, [selectedCategorySlug, setSearchParams]);
+    const params: Record<string, string> = {};
+    if (selectedCategorySlug) params.category = selectedCategorySlug;
+    if (selectedSubCategorySlug) params.subcategory = selectedSubCategorySlug;
+    setSearchParams(params);
+  }, [selectedCategorySlug, selectedSubCategorySlug, setSearchParams]);
+
+  // Sync from URL params (e.g. mega menu links)
+  useEffect(() => {
+    const cat = searchParams.get("category");
+    const sub = searchParams.get("subcategory");
+    if (cat !== selectedCategorySlug) setSelectedCategorySlug(cat);
+    if (sub !== selectedSubCategorySlug) setSelectedSubCategorySlug(sub);
+  }, [searchParams]);
 
   // Get active categories for the filter sidebar
   const activeCategories = useMemo(() => 
@@ -64,15 +74,34 @@ const Shop = () => {
     [categories]
   );
 
-  // Filter products by selected category
-  const filteredProducts = useMemo(() => {
-    if (!selectedCategorySlug) return products.filter(p => p.isActive);
-    
+  // Get subcategories for the selected category
+  const activeSubCategories = useMemo(() => {
+    if (!selectedCategorySlug) return [];
     const selectedCategory = categories.find(c => c.slug === selectedCategorySlug);
-    if (!selectedCategory) return products.filter(p => p.isActive);
+    if (!selectedCategory) return [];
+    return subCategories.filter(sc => sc.categoryId === selectedCategory.id && sc.isActive);
+  }, [selectedCategorySlug, categories, subCategories]);
+
+  // Filter products by selected category and subcategory
+  const filteredProducts = useMemo(() => {
+    let filtered = products.filter(p => p.isActive);
     
-    return products.filter(p => p.isActive && p.categoryId === selectedCategory.id);
-  }, [products, categories, selectedCategorySlug]);
+    if (selectedCategorySlug) {
+      const selectedCategory = categories.find(c => c.slug === selectedCategorySlug);
+      if (selectedCategory) {
+        filtered = filtered.filter(p => p.categoryId === selectedCategory.id);
+      }
+    }
+
+    if (selectedSubCategorySlug) {
+      const selectedSub = subCategories.find(sc => sc.slug === selectedSubCategorySlug);
+      if (selectedSub) {
+        filtered = filtered.filter(p => p.subCategoryId === selectedSub.id);
+      }
+    }
+    
+    return filtered;
+  }, [products, categories, subCategories, selectedCategorySlug, selectedSubCategorySlug]);
 
   // Sort products
   const sortedProducts = useMemo(() => {
@@ -98,8 +127,18 @@ const Shop = () => {
 
   const handleCategorySelect = (slug: string | null) => {
     setSelectedCategorySlug(slug);
+    setSelectedSubCategorySlug(null); // Reset subcategory when category changes
     setMobileFiltersOpen(false);
   };
+
+  const handleSubCategorySelect = (slug: string | null) => {
+    setSelectedSubCategorySlug(slug);
+    setMobileFiltersOpen(false);
+  };
+
+  const selectedSubCategoryName = selectedSubCategorySlug
+    ? subCategories.find(sc => sc.slug === selectedSubCategorySlug)?.name || null
+    : null;
 
   const loading = categoriesLoading || productsLoading || subCategoriesLoading;
 
@@ -138,8 +177,38 @@ const Shop = () => {
           </div>
         )}
       </div>
+
+      {/* Subcategories - only show when a category is selected */}
+      {selectedCategorySlug && activeSubCategories.length > 0 && (
+        <div>
+          <h3 className="font-serif text-lg font-semibold mb-4">Subcategories</h3>
+          <div className="space-y-2">
+            <label className="flex items-center gap-2 cursor-pointer group min-h-[44px]">
+              <Checkbox
+                checked={selectedSubCategorySlug === null}
+                onCheckedChange={() => handleSubCategorySelect(null)}
+              />
+              <span className="text-sm text-muted-foreground group-hover:text-foreground transition-colors">
+                All in {selectedCategoryName}
+              </span>
+            </label>
+            {activeSubCategories.map((sub) => (
+              <label key={sub.id} className="flex items-center gap-2 cursor-pointer group min-h-[44px]">
+                <Checkbox
+                  checked={selectedSubCategorySlug === sub.slug}
+                  onCheckedChange={() => handleSubCategorySelect(sub.slug)}
+                />
+                <span className="text-sm text-muted-foreground group-hover:text-foreground transition-colors">
+                  {sub.name}
+                </span>
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
+
 
   return (
     <Layout>
@@ -221,18 +290,31 @@ const Shop = () => {
             </div>
 
             {/* Active Filters */}
-            {selectedCategoryName && (
+            {(selectedCategoryName || selectedSubCategoryName) && (
               <div className="flex items-center gap-2 mb-4 md:mb-6 flex-wrap">
                 <span className="text-xs md:text-sm text-muted-foreground">Active:</span>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => handleCategorySelect(null)}
-                  className="h-7 text-xs"
-                >
-                  {selectedCategoryName}
-                  <X className="w-3 h-3 ml-1" />
-                </Button>
+                {selectedCategoryName && (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => handleCategorySelect(null)}
+                    className="h-7 text-xs"
+                  >
+                    {selectedCategoryName}
+                    <X className="w-3 h-3 ml-1" />
+                  </Button>
+                )}
+                {selectedSubCategoryName && (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => handleSubCategorySelect(null)}
+                    className="h-7 text-xs"
+                  >
+                    {selectedSubCategoryName}
+                    <X className="w-3 h-3 ml-1" />
+                  </Button>
+                )}
               </div>
             )}
 
