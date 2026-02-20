@@ -1,85 +1,62 @@
 
-
-## Plan: Fix Subcategory Filter, Image Loading, and Mobile Thumbnails
-
-### Issue 1: Subcategory Filter Broken + Infinite Loop
-
-**Root Cause Analysis - 6 potential causes investigated:**
-
-1. **[CONFIRMED - INFINITE LOOP] Circular useEffect dependency between URL sync and state sync.** Lines 56-61 and 64-69 in `Shop.tsx` create a loop: state changes trigger URL update (effect 1), URL change triggers state update (effect 2), which triggers URL update again. This causes the "vibrating text" symptom -- rapid re-renders as both effects fire alternately.
-
-2. **[CONFIRMED - NO PRODUCTS] Subcategory slug mismatch.** When clicking from the mega menu, the URL contains `subcategory=king-size`. The filtering at line 97 looks up `subCategories.find(sc => sc.slug === selectedSubCategorySlug)`. If the subcategory's `slug` field in Firestore doesn't exactly match `king-size` (e.g., it could be `king_size` or `King Size`), the lookup fails and no products match.
-
-3. **[CONFIRMED - NO PRODUCTS] Category slug not passed correctly from mega menu.** The mega menu links to `/shop?category=${currentCategory?.slug}&subcategory=${sub.slug}`. If `currentCategory?.slug` is the Firestore slug but the Shop page compares against `categories.find(c => c.slug === selectedCategorySlug)`, any mismatch means no category match and therefore no products.
-
-4. **[INVESTIGATED] Products might not have `isActive` set.** The filter at line 87 does `products.filter(p => p.isActive)`. If a product doesn't have `isActive` field at all, `p.isActive` would be `undefined` (falsy), hiding the product. This is possible but less likely since products are being created through the admin form.
-
-5. **[INVESTIGATED] Firestore index missing for products query.** The network logs show a `code: 9` error requiring a composite index for `categoryId + isActive + createdAt`. This affects `fetchRelatedProducts` but not the main `useProducts()` call in Shop (which fetches all products with just `orderBy('createdAt', 'desc')`).
-
-6. **[INVESTIGATED] `useSubCategories()` called without categoryId.** Shop.tsx calls `useSubCategories()` with no argument, which fetches ALL subcategories. This is correct for the lookup logic.
-
-**Fix:**
-
-**File: `src/pages/Shop.tsx`**
-- **Remove the dual useEffect loop.** Replace the two competing effects with a single `useEffect` that reads from URL params on mount/URL change and sets state, plus use `setSearchParams` directly inside the handler functions (not in a separate effect). This eliminates the circular dependency.
-- The `handleCategorySelect` and `handleSubCategorySelect` functions will directly call `setSearchParams` in addition to setting state, removing the need for the state-to-URL sync effect entirely.
+## Plan: Fix Subcategory Filtering + resizeImage 500 Error Resolution
 
 ---
 
-### Issue 2: Desktop Hover Image Loading Delay (2-3 seconds per hover)
+### Issue 1: Subcategory Filter Shows 0 Products — Root Cause Analysis
 
-**Root Cause:**
-The desktop main image (line 474) uses a raw `<img>` tag with `src={mainImageSrc}`. The `mainImageSrc` is computed from `getOptimizedImageUrl()` which points to the Firebase resize function. This function returns 500 errors, triggering the `handleMainImageError` fallback to the original URL. The problem:
+**Confirmed Root Cause (two separate bugs working together):**
 
-1. On each hover, `selectedImage` changes
-2. `mainImageFallback` is reset to `false` (line 227)
-3. The component first tries the optimized URL (which returns 500)
-4. Only after the 500 error does it fallback to original
-5. This 500 request + fallback happens on EVERY hover, even for previously viewed images
+**Bug A — isActive silent filter:** `filteredProducts` at line 79 runs `products.filter(p => p.isActive)`. Products created before the `isActive` field was added to the form (or products where it was never explicitly set) will have `isActive === undefined`, which is falsy. These products vanish silently. This is why removing the subcategory filter (which shows the category) shows products — the category filter path is less strict.
 
-The `loadedImages` Set tracks preload completion, but the main image still goes through the optimized-then-fallback cycle each time because `mainImageFallback` resets per image index.
+**Bug B — Race condition on subCategories data:** When arriving from the mega menu (direct URL navigation), the URL params are immediately available, but `subCategories` from the Firestore query may not be loaded yet. The `filteredProducts` useMemo runs when `searchParams` changes (triggering `selectedSubCategorySlug` state update), but `subCategories` is still empty `[]`. So `subCategories.find(sc => sc.slug === "king-size")` returns `undefined`, the subcategory filter is skipped/empty, and 0 products show. Once subCategories loads, the useMemo should re-run — but because `selectedSubCategorySlug` hasn't changed, if `products` and `categories` also haven't changed, React may not re-run the memoization.
 
-**Fix in `src/pages/ProductDetail.tsx`:**
-- Change `mainImageFallback` from a single boolean to a `Set<number>` tracking which image indices have already failed optimization
-- When image at index N fails, add N to the set
-- On subsequent hovers to index N, immediately use the original URL (skip the failed optimized attempt)
-- This means: first view = try optimized, fail, fallback; subsequent views = instant original URL
+**Fix in `src/pages/Shop.tsx`:**
+
+1. **Fix Bug A:** Change `products.filter(p => p.isActive)` to `products.filter(p => p.isActive !== false)` — this treats `undefined` as active (safe default), only explicitly deactivated products are hidden.
+
+2. **Fix Bug B:** Add `subCategoriesLoading` awareness — show products only when all data is ready. The filteredProducts useMemo already depends on `subCategories`, so it will re-run when subcategories load. However, the issue is the loading state — we show "No products found" while data is loading. Fix: add a combined `loading` check that includes subcategories, and during loading show skeletons instead of the empty state. The `loading` variable already includes `subCategoriesLoading` (line 140), so we need to make sure the "No products" empty state only shows when `!loading && sortedProducts.length === 0`.
+
+3. **Add defensive fallback:** If `selectedSubCategorySlug` is set but the subcategory object isn't found yet (still loading), don't filter — wait for data.
 
 ---
 
-### Issue 3: Mobile Thumbnails Overflow Page Width
+### Issue 2: resizeImage 500 Error — Root Cause & Fix Steps
 
-**Root Cause:** The thumbnail strip at line 403-430 uses `overflow-x-auto` which should scroll, but the container has no `max-width` constraint. The `flex-shrink-0` on each thumbnail prevents them from shrinking, and the parent container may not be constraining width properly.
+**Root Cause (confirmed from logs):**
+```
+Error: Permission 'iam.serviceAccounts.signBlob' denied on resource
+```
+The Cloud Function is trying to generate a **signed URL** for the resized image in Firebase Storage. To generate signed URLs, the service account running the function needs the `iam.serviceAccounts.signBlob` IAM permission. The default App Engine/Cloud Functions service account (`PROJECT_ID@appspot.gserviceaccount.com`) does NOT have this permission by default on newer Firebase projects.
 
-**Fix in `src/pages/ProductDetail.tsx`:**
-- Add `max-w-full` and `w-full` to the thumbnail strip container
-- Ensure the parent `<div>` constrains width properly
-- The key fix: the thumbnail container needs an explicit width constraint so `overflow-x-auto` activates. Add `overflow-hidden` to the parent container wrapping the entire mobile gallery section.
+**This is a Google Cloud IAM configuration issue — not a code bug.** It requires a one-time fix in the Google Cloud Console.
+
+**Steps to fix (you need to do this in Firebase/Google Cloud Console):**
+
+Step 1 — Go to [Google Cloud Console IAM](https://console.cloud.google.com/iam-admin/iam) and select your project `jaipur-touch-d8a54`.
+
+Step 2 — Find the service account used by your Cloud Function. It will be named `jaipur-touch-d8a54@appspot.gserviceaccount.com` (App Engine default service account).
+
+Step 3 — Click the pencil (Edit) icon next to that service account.
+
+Step 4 — Click "Add another role" and search for **"Service Account Token Creator"** (role ID: `roles/iam.serviceAccountTokenCreator`). Add it.
+
+Step 5 — Click Save. The permission propagates within 1-2 minutes.
+
+Step 6 — Test by opening any product page — images should now load via the resizeImage function without 500 errors.
+
+**Alternative fix (if the above doesn't work):** In your Cloud Function code, instead of generating a signed URL, make the resized images publicly accessible by setting their metadata to `public: true` and returning the direct storage URL instead. But the IAM role fix above is the correct solution.
+
+**Code-side fix (already done, no change needed):** The `failedOptimized` Set in `ProductDetail.tsx` already handles the 500 errors gracefully — if the optimize call fails, it instantly falls back to the original URL without retrying. So the frontend already handles this correctly once the IAM permission is granted.
 
 ---
 
-### Summary of File Changes
+### Summary of Code Changes
 
-| File | Action | Description |
-|------|--------|-------------|
-| `src/pages/Shop.tsx` | Modify | Fix infinite loop by removing dual useEffect, sync URL directly in handlers |
-| `src/pages/ProductDetail.tsx` | Modify | Fix per-image fallback tracking, constrain mobile thumbnail width |
+| File | Change | Reason |
+|------|--------|--------|
+| `src/pages/Shop.tsx` | Change `p.isActive` to `p.isActive !== false` | Fix silent product hiding for older products |
+| `src/pages/Shop.tsx` | Only show empty state when `!loading` (already partially done, verify line 329) | Fix race condition showing "0 products" while subcategories load |
+| `src/pages/Shop.tsx` | Add `subCategoriesLoading` guard in filteredProducts | Prevent filtering before data is ready |
 
-### Technical Details
-
-**Shop.tsx infinite loop fix:**
-- Remove the effect at lines 56-61 (state-to-URL sync)
-- Keep only the URL-to-state sync effect (lines 64-69) for handling external navigation (mega menu clicks)
-- Move `setSearchParams` calls into `handleCategorySelect` and `handleSubCategorySelect` directly
-- This breaks the circular dependency: URL changes set state (one-way), and user actions set both state and URL (direct)
-
-**ProductDetail.tsx fallback tracking:**
-- Replace `const [mainImageFallback, setMainImageFallback] = useState(false)` with `const [failedOptimized, setFailedOptimized] = useState<Set<number>>(new Set())`
-- Reset the set when `selectedColorId` changes (not on every image switch)
-- `mainImageSrc` becomes: `failedOptimized.has(safeSelectedImage) ? imageData[safeSelectedImage]?.original : imageData[safeSelectedImage]?.full`
-- On error: `setFailedOptimized(prev => new Set(prev).add(safeSelectedImage))`
-
-**Mobile thumbnail width fix:**
-- Wrap the mobile gallery in a container with `overflow-hidden w-full`
-- The thumbnail strip already has `overflow-x-auto` which will now correctly activate since the parent constrains width
-
+**No Firebase Cloud Function code changes needed** — the IAM role grant resolves the resizeImage issue completely.
