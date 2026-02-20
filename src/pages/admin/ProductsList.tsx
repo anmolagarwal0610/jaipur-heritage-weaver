@@ -138,6 +138,24 @@ export default function ProductsList() {
     }).format(price);
   };
 
+  // Get display price from sizeVariants (new model) or legacy price field
+  const getDisplayPrice = (product: Product) => {
+    if (product.sizeVariants && product.sizeVariants.length > 0) {
+      const first = product.sizeVariants[0];
+      return { price: first.price, compareAt: first.compareAtPrice, label: first.sizeName };
+    }
+    return { price: product.price || 0, compareAt: product.compareAtPrice, label: null };
+  };
+
+  // Get total stock from first color variant's sizeInventory (new model) or legacy stockQuantity
+  const getDisplayStock = (product: Product) => {
+    const firstColor = product.colorVariants?.[0];
+    if (firstColor?.sizeInventory && firstColor.sizeInventory.length > 0) {
+      return firstColor.sizeInventory.reduce((sum, si) => sum + (si.stockQuantity || 0), 0);
+    }
+    return product.stockQuantity ?? null;
+  };
+
   if (categoryLoading || productsLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -255,19 +273,33 @@ export default function ProductsList() {
                       </div>
                     </TableCell>
                     <TableCell className="text-right">
-                      <div>
-                        <p className="font-medium">{formatPrice(product.price)}</p>
-                        {product.compareAtPrice && (
-                          <p className="text-xs text-muted-foreground line-through">
-                            {formatPrice(product.compareAtPrice)}
-                          </p>
-                        )}
-                      </div>
+                      {(() => {
+                        const { price, compareAt, label } = getDisplayPrice(product);
+                        return (
+                          <div>
+                            <p className="font-medium">
+                              {formatPrice(price)}
+                              {label && <span className="text-xs text-muted-foreground ml-1">({label})</span>}
+                            </p>
+                            {compareAt && (
+                              <p className="text-xs text-muted-foreground line-through">
+                                {formatPrice(compareAt)}
+                              </p>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </TableCell>
                     <TableCell className="text-center hidden md:table-cell">
-                      <Badge variant={product.inStock ? 'outline' : 'destructive'}>
-                        {product.inStock ? product.stockQuantity : 'Out of Stock'}
-                      </Badge>
+                      {(() => {
+                        const stock = getDisplayStock(product);
+                        const inStock = stock === null ? product.inStock : stock > 0;
+                        return (
+                          <Badge variant={inStock ? 'outline' : 'destructive'}>
+                            {inStock ? (stock !== null ? stock : 'In Stock') : 'Out of Stock'}
+                          </Badge>
+                        );
+                      })()}
                     </TableCell>
                     <TableCell className="text-center">
                       {product.isFeatured ? (

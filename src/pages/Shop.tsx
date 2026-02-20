@@ -74,6 +74,9 @@ const Shop = () => {
     return subCategories.filter(sc => sc.categoryId === selectedCategory.id && sc.isActive);
   }, [selectedCategorySlug, categories, subCategories]);
 
+  // Normalize a slug/name string for fuzzy matching: lowercase, alphanumeric only
+  const normalizeSlug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+
   // Filter products by selected category and subcategory
   const filteredProducts = useMemo(() => {
     // Treat undefined isActive as active (older products may not have this field set)
@@ -88,14 +91,25 @@ const Shop = () => {
 
     if (selectedSubCategorySlug) {
       // If subcategories are still loading, don't filter yet — avoids race condition
-      // where URL params are set but Firestore data hasn't arrived yet
       if (subCategoriesLoading) return [];
-      const selectedSub = subCategories.find(sc => sc.slug === selectedSubCategorySlug);
+
+      // Debug: log all available slugs so slug mismatches are immediately visible
+      console.log('[Shop] Loaded subcategory slugs:', subCategories.map(sc => `${sc.slug} (id: ${sc.id})`));
+      console.log('[Shop] Looking for subcategory slug:', selectedSubCategorySlug);
+
+      // Three-tier lookup: exact → normalized slug → normalized name
+      const normTarget = normalizeSlug(selectedSubCategorySlug);
+      const selectedSub =
+        subCategories.find(sc => sc.slug === selectedSubCategorySlug) ||
+        subCategories.find(sc => normalizeSlug(sc.slug) === normTarget) ||
+        subCategories.find(sc => normalizeSlug(sc.name) === normTarget);
+
       if (selectedSub) {
+        console.log('[Shop] Matched subcategory:', selectedSub.name, 'id:', selectedSub.id);
         filtered = filtered.filter(p => p.subCategoryId === selectedSub.id);
+        console.log('[Shop] Products after subcat filter:', filtered.length, '(total before:', products.length, ')');
       } else {
-        // Subcategory slug not found even after loading — likely a bad URL param, show all in category
-        console.warn(`Subcategory slug "${selectedSubCategorySlug}" not found in loaded subcategories`);
+        console.warn(`[Shop] Subcategory slug "${selectedSubCategorySlug}" not found. Available:`, subCategories.map(sc => sc.slug));
       }
     }
     
