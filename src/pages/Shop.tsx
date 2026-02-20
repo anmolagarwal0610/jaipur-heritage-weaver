@@ -76,7 +76,8 @@ const Shop = () => {
 
   // Filter products by selected category and subcategory
   const filteredProducts = useMemo(() => {
-    let filtered = products.filter(p => p.isActive);
+    // Treat undefined isActive as active (older products may not have this field set)
+    let filtered = products.filter(p => p.isActive !== false);
     
     if (selectedCategorySlug) {
       const selectedCategory = categories.find(c => c.slug === selectedCategorySlug);
@@ -86,14 +87,20 @@ const Shop = () => {
     }
 
     if (selectedSubCategorySlug) {
+      // If subcategories are still loading, don't filter yet — avoids race condition
+      // where URL params are set but Firestore data hasn't arrived yet
+      if (subCategoriesLoading) return [];
       const selectedSub = subCategories.find(sc => sc.slug === selectedSubCategorySlug);
       if (selectedSub) {
         filtered = filtered.filter(p => p.subCategoryId === selectedSub.id);
+      } else {
+        // Subcategory slug not found even after loading — likely a bad URL param, show all in category
+        console.warn(`Subcategory slug "${selectedSubCategorySlug}" not found in loaded subcategories`);
       }
     }
     
     return filtered;
-  }, [products, categories, subCategories, selectedCategorySlug, selectedSubCategorySlug]);
+  }, [products, categories, subCategories, subCategoriesLoading, selectedCategorySlug, selectedSubCategorySlug]);
 
   // Sort products
   const sortedProducts = useMemo(() => {
@@ -316,7 +323,7 @@ const Shop = () => {
             )}
 
             {/* Products */}
-            {loading ? (
+            {(loading || (selectedSubCategorySlug !== null && subCategoriesLoading)) ? (
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
                 {[...Array(6)].map((_, index) => (
                   <div key={index} className="space-y-3">
