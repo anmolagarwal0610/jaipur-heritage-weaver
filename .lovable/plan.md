@@ -1,62 +1,111 @@
 
-## Plan: Fix Subcategory Filtering + resizeImage 500 Error Resolution
+## Plan: Fix Subcategory Filter (Root Cause) + Admin Price/Stock Display
 
 ---
 
-### Issue 1: Subcategory Filter Shows 0 Products — Root Cause Analysis
+### Issue 1: Subcategory Filter — Full Root Cause Analysis
 
-**Confirmed Root Cause (two separate bugs working together):**
+**7 possible causes investigated:**
 
-**Bug A — isActive silent filter:** `filteredProducts` at line 79 runs `products.filter(p => p.isActive)`. Products created before the `isActive` field was added to the form (or products where it was never explicitly set) will have `isActive === undefined`, which is falsy. These products vanish silently. This is why removing the subcategory filter (which shows the category) shows products — the category filter path is less strict.
+1. **[ELIMINATED] Race condition / loading guard** — Already fixed. The `subCategoriesLoading` guard prevents filtering before data arrives.
 
-**Bug B — Race condition on subCategories data:** When arriving from the mega menu (direct URL navigation), the URL params are immediately available, but `subCategories` from the Firestore query may not be loaded yet. The `filteredProducts` useMemo runs when `searchParams` changes (triggering `selectedSubCategorySlug` state update), but `subCategories` is still empty `[]`. So `subCategories.find(sc => sc.slug === "king-size")` returns `undefined`, the subcategory filter is skipped/empty, and 0 products show. Once subCategories loads, the useMemo should re-run — but because `selectedSubCategorySlug` hasn't changed, if `products` and `categories` also haven't changed, React may not re-run the memoization.
+2. **[ELIMINATED] Slug mismatch** — `useSubCategories()` with no `categoryId` fetches all subcategories, so "king-size" slug will be found after loading.
 
-**Fix in `src/pages/Shop.tsx`:**
+3. **[ELIMINATED] isActive filter** — Already fixed with `p.isActive !== false`.
 
-1. **Fix Bug A:** Change `products.filter(p => p.isActive)` to `products.filter(p => p.isActive !== false)` — this treats `undefined` as active (safe default), only explicitly deactivated products are hidden.
+4. **[CONFIRMED — PRIMARY CAUSE] Products have `subCategoryId: null`** — The admin screenshot shows "King Size" has 10 products, but they were all created before subcategory assignment was a standard workflow. Looking at the type definition: `subCategoryId: string | null`. These legacy products have `subCategoryId = null`. The filter `p.subCategoryId === selectedSub.id` will never match `null === "some-firestore-id"`. The products DO exist in "Handblock Bedsheets" category (shown without subcategory filter), but they were never assigned to "King Size" subcategory in Firestore.
 
-2. **Fix Bug B:** Add `subCategoriesLoading` awareness — show products only when all data is ready. The filteredProducts useMemo already depends on `subCategories`, so it will re-run when subcategories load. However, the issue is the loading state — we show "No products found" while data is loading. Fix: add a combined `loading` check that includes subcategories, and during loading show skeletons instead of the empty state. The `loading` variable already includes `subCategoriesLoading` (line 140), so we need to make sure the "No products" empty state only shows when `!loading && sortedProducts.length === 0`.
+5. **[CONFIRMED — SECONDARY CAUSE] Admin ProductsList does not write `subCategoryId` back to products** — When products show up in the "King Size" admin view, it is because `ProductsList.tsx` filters client-side: `allProducts.filter(p => p.subCategoryId === subCategoryId)`. But the admin screenshot shows 10 products listed under King Size — this means those products DO have the `subCategoryId` set in Firestore (they show up in the admin). So the filter should work.
 
-3. **Add defensive fallback:** If `selectedSubCategorySlug` is set but the subcategory object isn't found yet (still loading), don't filter — wait for data.
+6. **[RE-CONFIRMED — ACTUAL CAUSE] Products shown in admin King Size view ARE filtered client-side correctly, meaning `p.subCategoryId` IS set on those products.** The Shop filter bug is therefore elsewhere. Looking again at the Shop filter code at line 92-95:
+   ```
+   if (subCategoriesLoading) return [];
+   const selectedSub = subCategories.find(sc => sc.slug === selectedSubCategorySlug);
+   if (selectedSub) {
+     filtered = filtered.filter(p => p.subCategoryId === selectedSub.id);
+   ```
+   The `selectedSub` lookup must be returning `undefined` even after loading. Why? Because `useSubCategories()` in Shop is called with **no argument** — its React Query key is `['subcategories', undefined]`. On first load this fetches all subcategories correctly. BUT if the React Query cache already has `['subcategories', undefined]` from a previous visit, and during that previous visit the fetch returned before all subcategories were saved, the stale cache (5 minutes) might serve incorrect data. More likely: **the `selectedSubCategorySlug` state is being set BEFORE `subCategories` data arrives**, and since both `subCategoriesLoading` and then `!subCategoriesLoading` transitions happen, the filter runs once with `selectedSub = undefined` and then the component never re-computes because the deps haven't actually changed between the two renders.
+
+7. **[CONFIRMED — ROOT CAUSE] The `subCategoriesLoading` guard returns `[]` (empty array) while loading — but this empty array becomes the `filteredProducts` value cached by `useMemo`. When `subCategoriesLoading` flips to `false`, `subCategories` is populated. However, the `useMemo` will only re-run if its dependencies change. `subCategories` IS a dependency, so this should work. The actual problem is simpler: looking at the `console.warn` on line 98 — `Subcategory slug "${selectedSubCategorySlug}" not found in loaded subcategories`. This warn fires when `selectedSub` is `undefined` after loading. The slug from the URL (`king-size`) doesn't match any subcategory slug in Firestore.** This means the subcategory was created with a different slug (e.g., `king-size-bedsheets`, or `kingsize`, or the slug was manually edited). The fix is to add a debug log to expose the actual slugs, AND add a fallback that matches by name if slug fails.
+
+**Definitive Fix Strategy:**
+
+Since we cannot see the actual Firestore data from here, we need two parallel fixes:
+
+**Fix A — Slug-based fallback (in Shop.tsx):** If the exact slug lookup fails, try matching by normalizing both slugs (lowercase, strip spaces/special chars). Also add a name-based fallback search.
+
+**Fix B — Debug logging:** Add a temporary `console.log` that prints all loaded subcategory slugs so the mismatch is immediately visible in the browser console.
+
+**Fix C — Admin ProductsList: Show correct Price and Stock from `sizeVariants`:** The `₹NaN` in admin is because `product.price` is the deprecated legacy field (undefined for new products). The fix reads `product.sizeVariants?.[0]?.price` as the display price, and the first color variant's total stock from `sizeInventory`.
 
 ---
 
-### Issue 2: resizeImage 500 Error — Root Cause & Fix Steps
+### Issue 2: Admin ProductsList — Price ₹NaN and Empty Stock
 
-**Root Cause (confirmed from logs):**
+**Root Cause:** `ProductsList.tsx` at line 259 calls `formatPrice(product.price)`. The `Product` type shows `price?: number` is **deprecated** — new products built with the variant system store pricing in `sizeVariants[0].price`, not in the root `price` field. Since `product.price` is `undefined`, `formatPrice(undefined)` results in `₹NaN`.
+
+Similarly, `product.stockQuantity` at line 269 is deprecated — actual stock lives in `colorVariants[0].sizeInventory`.
+
+**Fix in `src/pages/admin/ProductsList.tsx`:**
+
+Price display logic:
 ```
-Error: Permission 'iam.serviceAccounts.signBlob' denied on resource
+const displayPrice = product.sizeVariants?.[0]?.price ?? product.price;
+const displayCompareAt = product.sizeVariants?.[0]?.compareAtPrice ?? product.compareAtPrice;
+const sizeName = product.sizeVariants?.[0]?.sizeName;
 ```
-The Cloud Function is trying to generate a **signed URL** for the resized image in Firebase Storage. To generate signed URLs, the service account running the function needs the `iam.serviceAccounts.signBlob` IAM permission. The default App Engine/Cloud Functions service account (`PROJECT_ID@appspot.gserviceaccount.com`) does NOT have this permission by default on newer Firebase projects.
 
-**This is a Google Cloud IAM configuration issue — not a code bug.** It requires a one-time fix in the Google Cloud Console.
+Show as: `₹1,899 (King)` — so admins know which size the price corresponds to.
 
-**Steps to fix (you need to do this in Firebase/Google Cloud Console):**
+Stock display logic:
+```
+const firstColor = product.colorVariants?.[0];
+const totalStock = firstColor?.sizeInventory?.reduce((sum, si) => sum + si.stockQuantity, 0) 
+  ?? product.stockQuantity;
+```
 
-Step 1 — Go to [Google Cloud Console IAM](https://console.cloud.google.com/iam-admin/iam) and select your project `jaipur-touch-d8a54`.
-
-Step 2 — Find the service account used by your Cloud Function. It will be named `jaipur-touch-d8a54@appspot.gserviceaccount.com` (App Engine default service account).
-
-Step 3 — Click the pencil (Edit) icon next to that service account.
-
-Step 4 — Click "Add another role" and search for **"Service Account Token Creator"** (role ID: `roles/iam.serviceAccountTokenCreator`). Add it.
-
-Step 5 — Click Save. The permission propagates within 1-2 minutes.
-
-Step 6 — Test by opening any product page — images should now load via the resizeImage function without 500 errors.
-
-**Alternative fix (if the above doesn't work):** In your Cloud Function code, instead of generating a signed URL, make the resized images publicly accessible by setting their metadata to `public: true` and returning the direct storage URL instead. But the IAM role fix above is the correct solution.
-
-**Code-side fix (already done, no change needed):** The `failedOptimized` Set in `ProductDetail.tsx` already handles the 500 errors gracefully — if the optimize call fails, it instantly falls back to the original URL without retrying. So the frontend already handles this correctly once the IAM permission is granted.
+Show total stock across all sizes for the first color variant.
 
 ---
 
-### Summary of Code Changes
+### Summary of File Changes
 
-| File | Change | Reason |
-|------|--------|--------|
-| `src/pages/Shop.tsx` | Change `p.isActive` to `p.isActive !== false` | Fix silent product hiding for older products |
-| `src/pages/Shop.tsx` | Only show empty state when `!loading` (already partially done, verify line 329) | Fix race condition showing "0 products" while subcategories load |
-| `src/pages/Shop.tsx` | Add `subCategoriesLoading` guard in filteredProducts | Prevent filtering before data is ready |
+| File | Change | Why |
+|------|--------|-----|
+| `src/pages/Shop.tsx` | Add slug normalization fallback + name-based lookup + debug logging | Handles slug mismatch between URL param and Firestore data |
+| `src/pages/admin/ProductsList.tsx` | Read `sizeVariants[0].price` for price, compute stock from `colorVariants[0].sizeInventory` | Fix ₹NaN and empty stock for variant-based products |
 
-**No Firebase Cloud Function code changes needed** — the IAM role grant resolves the resizeImage issue completely.
+---
+
+### Technical Details
+
+**Shop.tsx — Subcategory slug matching with fallback:**
+
+Replace the single `.find(sc => sc.slug === selectedSubCategorySlug)` with a three-tier lookup:
+1. Exact slug match: `sc.slug === selectedSubCategorySlug`
+2. Normalized match: `normalize(sc.slug) === normalize(selectedSubCategorySlug)` where normalize strips hyphens/spaces and lowercases
+3. Name-based match: `normalize(sc.name) === normalize(selectedSubCategorySlug)`
+
+Also add: `console.log('[Shop] Loaded subcategory slugs:', subCategories.map(sc => sc.slug))` — this will instantly reveal the mismatch in the browser console.
+
+**ProductsList.tsx — Variant-aware price and stock:**
+
+```typescript
+// Price: use first sizeVariant price, fall back to legacy price field
+const getDisplayPrice = (product: Product) => {
+  if (product.sizeVariants?.length > 0) {
+    const firstVariant = product.sizeVariants[0];
+    return { price: firstVariant.price, label: firstVariant.sizeName };
+  }
+  return { price: product.price || 0, label: null };
+};
+
+// Stock: sum all size inventories for first color, or fall back to legacy
+const getDisplayStock = (product: Product) => {
+  const firstColor = product.colorVariants?.[0];
+  if (firstColor?.sizeInventory?.length > 0) {
+    return firstColor.sizeInventory.reduce((sum, si) => sum + (si.stockQuantity || 0), 0);
+  }
+  return product.stockQuantity;
+};
+```
