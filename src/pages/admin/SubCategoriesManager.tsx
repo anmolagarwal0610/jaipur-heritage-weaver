@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -69,6 +69,17 @@ export default function SubCategoriesManager() {
     updateSubCategory,
     deleteSubCategory
   } = useSubCategories(categoryId);
+
+  // Detect duplicate slugs so they can be flagged in the UI
+  const duplicateSlugs = useMemo(() => {
+    const seen = new Set<string>();
+    const dupes = new Set<string>();
+    subCategories.forEach(sc => {
+      if (seen.has(sc.slug)) dupes.add(sc.slug);
+      else seen.add(sc.slug);
+    });
+    return dupes;
+  }, [subCategories]);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -262,6 +273,11 @@ export default function SubCategoriesManager() {
                       <div>
                         <p className="font-medium text-foreground">{subCategory.name}</p>
                         <p className="text-xs text-muted-foreground">/{subCategory.slug}</p>
+                        {duplicateSlugs.has(subCategory.slug) && (
+                          <Badge variant="outline" className="text-yellow-700 border-yellow-500 text-xs mt-1">
+                            ⚠ Duplicate slug — delete one
+                          </Badge>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell className="hidden md:table-cell">

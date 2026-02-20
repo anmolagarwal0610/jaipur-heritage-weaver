@@ -97,19 +97,24 @@ const Shop = () => {
       console.log('[Shop] Loaded subcategory slugs:', subCategories.map(sc => `${sc.slug} (id: ${sc.id})`));
       console.log('[Shop] Looking for subcategory slug:', selectedSubCategorySlug);
 
-      // Three-tier lookup: exact → normalized slug → normalized name
+      // Collect ALL matching subcategory IDs (handles duplicate slugs in Firestore)
       const normTarget = normalizeSlug(selectedSubCategorySlug);
-      const selectedSub =
-        subCategories.find(sc => sc.slug === selectedSubCategorySlug) ||
-        subCategories.find(sc => normalizeSlug(sc.slug) === normTarget) ||
-        subCategories.find(sc => normalizeSlug(sc.name) === normTarget);
+      const matchingSubIds = new Set(
+        subCategories
+          .filter(sc =>
+            sc.slug === selectedSubCategorySlug ||
+            normalizeSlug(sc.slug) === normTarget ||
+            normalizeSlug(sc.name) === normTarget
+          )
+          .map(sc => sc.id)
+      );
 
-      if (selectedSub) {
-        console.log('[Shop] Matched subcategory:', selectedSub.name, 'id:', selectedSub.id);
-        filtered = filtered.filter(p => p.subCategoryId === selectedSub.id);
+      if (matchingSubIds.size > 0) {
+        console.log('[Shop] Matched subcategory IDs:', [...matchingSubIds]);
+        filtered = filtered.filter(p => p.subCategoryId && matchingSubIds.has(p.subCategoryId));
         console.log('[Shop] Products after subcat filter:', filtered.length, '(total before:', products.length, ')');
       } else {
-        console.warn(`[Shop] Subcategory slug "${selectedSubCategorySlug}" not found. Available:`, subCategories.map(sc => sc.slug));
+        console.warn(`[Shop] No subcategory found for slug: ${selectedSubCategorySlug}`);
       }
     }
     
