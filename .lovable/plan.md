@@ -1,111 +1,123 @@
 
-## Plan: Fix Subcategory Filter (Root Cause) + Admin Price/Stock Display
+## Root Cause: Confirmed — Two Duplicate "King Size" Subcategories in Firestore
+
+The console log shows everything:
+
+```
+king-size (id: DQVcOdhceBy6qUR65Vxp)   ← .find() returns THIS (first match)
+king-size (id: khe9Pny20GGxLEWVEObH)   ← products are assigned to THIS
+```
+
+At line 103 of `Shop.tsx`, `.find()` returns the **first** match in the array. The products in "Handblock Bedsheets" have `subCategoryId = khe9Pny20GGxLEWVEObH`, but the filter runs against `DQVcOdhceBy6qUR65Vxp`. Zero products match — hence "0 products found".
+
+The three-tier matching already works perfectly. The slug match succeeds. The ID is just wrong because there are two records with the same slug.
 
 ---
 
-### Issue 1: Subcategory Filter — Full Root Cause Analysis
+### The Fix: Two Parts
 
-**7 possible causes investigated:**
+**Part 1 — Code fix in `Shop.tsx` (immediate, handles duplicates gracefully):**
 
-1. **[ELIMINATED] Race condition / loading guard** — Already fixed. The `subCategoriesLoading` guard prevents filtering before data arrives.
+Instead of `.find()` (returns first match only), use `.filter()` to collect **all** subcategory IDs that match the slug. Then filter products against **any** of those IDs using a `Set`:
 
-2. **[ELIMINATED] Slug mismatch** — `useSubCategories()` with no `categoryId` fetches all subcategories, so "king-size" slug will be found after loading.
+```typescript
+// Collect ALL matching subcategory IDs (handles duplicate slugs)
+const matchingSubIds = new Set(
+  subCategories
+    .filter(sc =>
+      sc.slug === selectedSubCategorySlug ||
+      normalizeSlug(sc.slug) === normTarget ||
+      normalizeSlug(sc.name) === normTarget
+    )
+    .map(sc => sc.id)
+);
 
-3. **[ELIMINATED] isActive filter** — Already fixed with `p.isActive !== false`.
+if (matchingSubIds.size > 0) {
+  filtered = filtered.filter(p => p.subCategoryId && matchingSubIds.has(p.subCategoryId));
+}
+```
 
-4. **[CONFIRMED — PRIMARY CAUSE] Products have `subCategoryId: null`** — The admin screenshot shows "King Size" has 10 products, but they were all created before subcategory assignment was a standard workflow. Looking at the type definition: `subCategoryId: string | null`. These legacy products have `subCategoryId = null`. The filter `p.subCategoryId === selectedSub.id` will never match `null === "some-firestore-id"`. The products DO exist in "Handblock Bedsheets" category (shown without subcategory filter), but they were never assigned to "King Size" subcategory in Firestore.
+This makes the filter work correctly even when duplicate subcategory records exist in Firestore. Both `DQVcOdhceBy6qUR65Vxp` and `khe9Pny20GGxLEWVEObH` will be in the set, so products assigned to either ID will show up.
 
-5. **[CONFIRMED — SECONDARY CAUSE] Admin ProductsList does not write `subCategoryId` back to products** — When products show up in the "King Size" admin view, it is because `ProductsList.tsx` filters client-side: `allProducts.filter(p => p.subCategoryId === subCategoryId)`. But the admin screenshot shows 10 products listed under King Size — this means those products DO have the `subCategoryId` set in Firestore (they show up in the admin). So the filter should work.
+**Part 2 — Admin: Expose the duplicate subcategories visually:**
 
-6. **[RE-CONFIRMED — ACTUAL CAUSE] Products shown in admin King Size view ARE filtered client-side correctly, meaning `p.subCategoryId` IS set on those products.** The Shop filter bug is therefore elsewhere. Looking again at the Shop filter code at line 92-95:
-   ```
-   if (subCategoriesLoading) return [];
-   const selectedSub = subCategories.find(sc => sc.slug === selectedSubCategorySlug);
-   if (selectedSub) {
-     filtered = filtered.filter(p => p.subCategoryId === selectedSub.id);
-   ```
-   The `selectedSub` lookup must be returning `undefined` even after loading. Why? Because `useSubCategories()` in Shop is called with **no argument** — its React Query key is `['subcategories', undefined]`. On first load this fetches all subcategories correctly. BUT if the React Query cache already has `['subcategories', undefined]` from a previous visit, and during that previous visit the fetch returned before all subcategories were saved, the stale cache (5 minutes) might serve incorrect data. More likely: **the `selectedSubCategorySlug` state is being set BEFORE `subCategories` data arrives**, and since both `subCategoriesLoading` and then `!subCategoriesLoading` transitions happen, the filter runs once with `selectedSub = undefined` and then the component never re-computes because the deps haven't actually changed between the two renders.
+In the `SubCategoriesManager.tsx` table, add a warning badge when two subcategories in the same category share the same slug. This helps you identify and clean up duplicates from the admin console directly.
 
-7. **[CONFIRMED — ROOT CAUSE] The `subCategoriesLoading` guard returns `[]` (empty array) while loading — but this empty array becomes the `filteredProducts` value cached by `useMemo`. When `subCategoriesLoading` flips to `false`, `subCategories` is populated. However, the `useMemo` will only re-run if its dependencies change. `subCategories` IS a dependency, so this should work. The actual problem is simpler: looking at the `console.warn` on line 98 — `Subcategory slug "${selectedSubCategorySlug}" not found in loaded subcategories`. This warn fires when `selectedSub` is `undefined` after loading. The slug from the URL (`king-size`) doesn't match any subcategory slug in Firestore.** This means the subcategory was created with a different slug (e.g., `king-size-bedsheets`, or `kingsize`, or the slug was manually edited). The fix is to add a debug log to expose the actual slugs, AND add a fallback that matches by name if slug fails.
+Add a `duplicateSlugs` computed set:
+```typescript
+const duplicateSlugs = useMemo(() => {
+  const seen = new Set<string>();
+  const dupes = new Set<string>();
+  subCategories.forEach(sc => {
+    if (seen.has(sc.slug)) dupes.add(sc.slug);
+    else seen.add(sc.slug);
+  });
+  return dupes;
+}, [subCategories]);
+```
 
-**Definitive Fix Strategy:**
-
-Since we cannot see the actual Firestore data from here, we need two parallel fixes:
-
-**Fix A — Slug-based fallback (in Shop.tsx):** If the exact slug lookup fails, try matching by normalizing both slugs (lowercase, strip spaces/special chars). Also add a name-based fallback search.
-
-**Fix B — Debug logging:** Add a temporary `console.log` that prints all loaded subcategory slugs so the mismatch is immediately visible in the browser console.
-
-**Fix C — Admin ProductsList: Show correct Price and Stock from `sizeVariants`:** The `₹NaN` in admin is because `product.price` is the deprecated legacy field (undefined for new products). The fix reads `product.sizeVariants?.[0]?.price` as the display price, and the first color variant's total stock from `sizeInventory`.
+Then show a yellow "Duplicate slug" badge next to any subcategory whose slug appears more than once — so you can delete the empty duplicate (`DQVcOdhceBy6qUR65Vxp` which has 0 products).
 
 ---
 
-### Issue 2: Admin ProductsList — Price ₹NaN and Empty Stock
+### How This Happened
 
-**Root Cause:** `ProductsList.tsx` at line 259 calls `formatPrice(product.price)`. The `Product` type shows `price?: number` is **deprecated** — new products built with the variant system store pricing in `sizeVariants[0].price`, not in the root `price` field. Since `product.price` is `undefined`, `formatPrice(undefined)` results in `₹NaN`.
-
-Similarly, `product.stockQuantity` at line 269 is deprecated — actual stock lives in `colorVariants[0].sizeInventory`.
-
-**Fix in `src/pages/admin/ProductsList.tsx`:**
-
-Price display logic:
-```
-const displayPrice = product.sizeVariants?.[0]?.price ?? product.price;
-const displayCompareAt = product.sizeVariants?.[0]?.compareAtPrice ?? product.compareAtPrice;
-const sizeName = product.sizeVariants?.[0]?.sizeName;
-```
-
-Show as: `₹1,899 (King)` — so admins know which size the price corresponds to.
-
-Stock display logic:
-```
-const firstColor = product.colorVariants?.[0];
-const totalStock = firstColor?.sizeInventory?.reduce((sum, si) => sum + si.stockQuantity, 0) 
-  ?? product.stockQuantity;
-```
-
-Show total stock across all sizes for the first color variant.
+When you created the "King Size" subcategory the first time, a record was created with ID `DQVcOdhceBy6qUR65Vxp`. Products may have been assigned later to the second record (`khe9Pny20GGxLEWVEObH`), OR the subcategory was created twice. The `useSubCategories` hook fetches all subcategories from Firestore without deduplication — both records come back, and `.find()` always wins with the wrong one.
 
 ---
 
-### Summary of File Changes
+### Files to Change
 
-| File | Change | Why |
-|------|--------|-----|
-| `src/pages/Shop.tsx` | Add slug normalization fallback + name-based lookup + debug logging | Handles slug mismatch between URL param and Firestore data |
-| `src/pages/admin/ProductsList.tsx` | Read `sizeVariants[0].price` for price, compute stock from `colorVariants[0].sizeInventory` | Fix ₹NaN and empty stock for variant-based products |
+| File | Change |
+|------|--------|
+| `src/pages/Shop.tsx` | Replace `.find()` with `.filter()` + `Set` to match ALL subcategories with same slug |
+| `src/pages/admin/SubCategoriesManager.tsx` | Add duplicate slug detection + warning badge in the table |
 
 ---
 
 ### Technical Details
 
-**Shop.tsx — Subcategory slug matching with fallback:**
+**`Shop.tsx` change (lines 100–113):**
 
-Replace the single `.find(sc => sc.slug === selectedSubCategorySlug)` with a three-tier lookup:
-1. Exact slug match: `sc.slug === selectedSubCategorySlug`
-2. Normalized match: `normalize(sc.slug) === normalize(selectedSubCategorySlug)` where normalize strips hyphens/spaces and lowercases
-3. Name-based match: `normalize(sc.name) === normalize(selectedSubCategorySlug)`
-
-Also add: `console.log('[Shop] Loaded subcategory slugs:', subCategories.map(sc => sc.slug))` — this will instantly reveal the mismatch in the browser console.
-
-**ProductsList.tsx — Variant-aware price and stock:**
-
+Current (broken):
 ```typescript
-// Price: use first sizeVariant price, fall back to legacy price field
-const getDisplayPrice = (product: Product) => {
-  if (product.sizeVariants?.length > 0) {
-    const firstVariant = product.sizeVariants[0];
-    return { price: firstVariant.price, label: firstVariant.sizeName };
-  }
-  return { price: product.price || 0, label: null };
-};
+const selectedSub =
+  subCategories.find(sc => sc.slug === selectedSubCategorySlug) || ...
 
-// Stock: sum all size inventories for first color, or fall back to legacy
-const getDisplayStock = (product: Product) => {
-  const firstColor = product.colorVariants?.[0];
-  if (firstColor?.sizeInventory?.length > 0) {
-    return firstColor.sizeInventory.reduce((sum, si) => sum + (si.stockQuantity || 0), 0);
-  }
-  return product.stockQuantity;
-};
+filtered = filtered.filter(p => p.subCategoryId === selectedSub.id);
 ```
+
+Replacement (correct):
+```typescript
+const normTarget = normalizeSlug(selectedSubCategorySlug);
+const matchingSubIds = new Set(
+  subCategories
+    .filter(sc =>
+      sc.slug === selectedSubCategorySlug ||
+      normalizeSlug(sc.slug) === normTarget ||
+      normalizeSlug(sc.name) === normTarget
+    )
+    .map(sc => sc.id)
+);
+
+if (matchingSubIds.size > 0) {
+  console.log('[Shop] Matched subcategory IDs:', [...matchingSubIds]);
+  filtered = filtered.filter(p => p.subCategoryId && matchingSubIds.has(p.subCategoryId));
+  console.log('[Shop] Products after subcat filter:', filtered.length);
+} else {
+  console.warn('[Shop] No subcategory found for slug:', selectedSubCategorySlug);
+}
+```
+
+**`SubCategoriesManager.tsx` change:**
+
+Add `duplicateSlugs` useMemo (described above) and in the Name cell of the table, add:
+```tsx
+{duplicateSlugs.has(subCategory.slug) && (
+  <Badge variant="outline" className="text-amber-600 border-amber-400 text-xs ml-1">
+    Duplicate slug — delete one
+  </Badge>
+)}
+```
+
+This visually flags the empty duplicate so you can delete it from the admin panel without touching Firestore directly.
